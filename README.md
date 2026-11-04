@@ -94,6 +94,18 @@ If you wish to just develop locally and not deploy to Vercel, [follow the steps 
 
    The starter kit should now be running on [localhost:3000](http://localhost:3000/).
 
+## Roboflow material scanner
+
+Add your Roboflow private API key to `.env.local` (do not use a `NEXT_PUBLIC_` variable):
+
+```env
+ROBOFLOW_API_KEY=your-roboflow-api-key
+```
+
+Open `/scan` over HTTPS (or on localhost), allow camera access, start the camera, take a photo, and choose **Identify materials**. You can also upload a JPEG or PNG. The client sends the image as multipart form data to `POST /api/scan`; the server calls the `me995802-ucf-edu/yolo-gwc11-izfl6` workflow with bearer authentication and returns `{ candidates: [{ name, confidence }] }`. Images over 10 MB are rejected. The endpoint does not write to the database; any accepted candidates must be added separately through the items API. The API key stays on the server. Camera capture requires browser permission and HTTPS outside localhost.
+
+Apply `supabase/migrations/20261104120000_create_items.sql` to your Supabase project before saving supplies. `POST /api/items` requires a signed-in user and accepts `{ name, quantity?, photo_url? }`; it creates an item owned by that user. The scanner calls it once for each accepted candidate. The migration enables row-level security so users can only access their own rows.
+
 6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
 
 > Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
