@@ -124,7 +124,7 @@ export function MaterialScanner() {
           body: JSON.stringify({ name: candidate.name.trim(), quantity: 1, photo_url: null }),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error ?? `Could not add ${candidate.name}.`);
+        if (!response.ok) throw new Error(data.error?.message ?? `Could not add ${candidate.name}.`);
         saved += 1;
         setCandidates((current) => current.filter((item) => item.id !== candidate.id));
       }
