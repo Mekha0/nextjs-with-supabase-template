@@ -4,7 +4,7 @@ Instructions for AI coding agents working on the Craft Supply Scanner & Project 
 
 ## Project Overview
 
-A mobile-first web app where users photograph craft supplies, build a persistent inventory, and receive project suggestions using only what they own. Core loop: **scan → inventory → suggest → craft → XP**.
+A mobile-first web app where users photograph craft supplies, build a persistent inventory, and receive project suggestions using only what they own. Core loop: **scan â†’ inventory â†’ suggest â†’ craft â†’ XP**.
 
 - **Stack:** Next.js (App Router), TypeScript strict, Tailwind CSS, Supabase (Auth, Postgres, Storage, RLS), Gemini API (suggestions), Roboflow (object detection), Vercel (deployment).
 - **Repo:** `Mekha0/nextjs-with-supabase-template`
@@ -44,12 +44,12 @@ app/
     items/[id]/route.ts     # PATCH update, DELETE
     crafts/route.ts         # GET list, POST create
     crafts/[id]/route.ts    # PATCH (XP side effect), DELETE
-    scan/route.ts           # POST image → Roboflow → candidates (does NOT write DB)
-    suggestions/route.ts    # GET → Gemini → filtered suggestions
+    scan/route.ts           # POST image â†’ Roboflow â†’ candidates (does NOT write DB)
+    suggestions/route.ts    # GET â†’ Gemini â†’ filtered suggestions
     health/route.ts         # GET smoke test
 lib/
   data/                     # server-only data access functions (items.ts, crafts.ts)
-  validation/               # shared Zod schemas (items.ts, crafts.ts) — imported by BOTH route handlers and frontend
+  validation/               # shared Zod schemas (items.ts, crafts.ts) â€” imported by BOTH route handlers and frontend
   supabase/server.ts        # createServerClient for RSC / Route Handlers / Actions
   supabase/client.ts        # createBrowserClient for Client Components only
 components/                 # UI components
@@ -72,16 +72,16 @@ It returns `{ candidates: [{ name, confidence }] }`. The client confirms candida
 `PATCH /api/crafts/:id` with `status: "complete"` must call the `complete_craft(craft_id)` Postgres RPC. That function locks the row, checks idempotency, updates the craft, and increments `profiles.xp` in one transaction. Do not implement XP increment in the route handler with two separate writes.
 
 **5. Auth: username maps to email internally.**
-Supabase Auth is email-based. On sign-up/login, map `username` → `{username}@craftstash.local` (lowercased, trimmed). Store the display `username` in `public.profiles`. A Postgres trigger on `auth.users` creates the `profiles` row automatically.
+Supabase Auth is email-based. On sign-up/login, map `username` â†’ `{username}@craftstash.local` (lowercased, trimmed). Store the display `username` in `public.profiles`. A Postgres trigger on `auth.users` creates the `profiles` row automatically.
 
 **6. Server Components fetch data directly; do not `fetch('/api/...')` from them.**
-Page data (inventory list, craft gallery) uses `await getItems()` from `lib/data/`. Route handlers exist for external clients, file uploads, and third-party API calls—not as an internal HTTP layer.
+Page data (inventory list, craft gallery) uses `await getItems()` from `lib/data/`. Route handlers exist for external clients, file uploads, and third-party API callsâ€”not as an internal HTTP layer.
 
 ## Component Model
 
 - **Server Components by default.** Add `"use client"` only for `useState`, `useEffect`, event handlers, or browser APIs.
 - **Client Components that need mutations call Server Actions**, not `fetch('/api/...')` directly. The only exceptions are `/api/scan` and `/api/suggestions`, which are consumed via hooks (`useScan`, `useSuggestions`) because they manage upload progress / on-demand loading state.
-- **Never import `lib/supabase/server.ts` in a Client Component.** Use `lib/supabase/client.ts` if the client truly needs Supabase (e.g., realtime subscriptions—not in MVP).
+- **Never import `lib/supabase/server.ts` in a Client Component.** Use `lib/supabase/client.ts` if the client truly needs Supabase (e.g., realtime subscriptionsâ€”not in MVP).
 
 ## Testing
 
