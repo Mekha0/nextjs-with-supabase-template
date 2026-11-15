@@ -64,5 +64,174 @@
   }
   body {
     @apply bg-background text-foreground;
+    margin: 0;
+  }
+}
+
+.welcome-stage {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  background: #eef5f8;
+}
+
+.welcome-screen {
+  position: relative;
+  width: min(100vw, 422px);
+  height: min(100svh, 844px);
+  min-height: 680px;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #c3e5f2;
+  color: #281d67;
+}
+
+.phone-status {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 47px;
+  color: #000;
+}
+
+.status-time {
+  position: absolute;
+  top: 14px;
+  left: 27px;
+  width: 54px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: -0.408px;
+  text-align: center;
+}
+
+.status-icons {
+  position: absolute;
+  top: 17px;
+  right: 26px;
+  width: 78.261px;
+  height: 13px;
+}
+
+.status-notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 153.432px;
+  height: 32px;
+  transform: translateX(-50%);
+}
+
+.welcome-content {
+  position: absolute;
+  top: clamp(150px, 23.58svh, 199px);
+  right: 62px;
+  left: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 62px;
+}
+
+.welcome-artwork {
+  position: relative;
+  width: 200px;
+  height: 264px;
+  flex: none;
+}
+
+.artwork-disc {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 200px;
+  height: 200px;
+}
+
+.paperclip-art {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  width: 191px;
+  height: 191px;
+}
+
+.welcome-artwork h1 {
+  position: absolute;
+  top: 223px;
+  left: 29px;
+  margin: 0;
+  color: #281d67;
+  font-family: "Noto Sans TC", var(--font-geist-sans), sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.welcome-actions {
+  display: flex;
+  width: 248px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.welcome-button {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #7daddd;
+  border-radius: 30px;
+  font-family: "Noto Sans TC", var(--font-geist-sans), sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  transition: filter 150ms ease, transform 150ms ease;
+}
+
+.welcome-button:hover {
+  filter: brightness(0.97);
+}
+
+.welcome-button:active {
+  transform: scale(0.98);
+}
+
+.welcome-button:focus-visible {
+  outline: 3px solid #281d67;
+  outline-offset: 4px;
+}
+
+.welcome-button-primary {
+  border-color: #7daddd;
+  background: #7daddd;
+  color: #fff;
+}
+
+.welcome-button-secondary {
+  background: transparent;
+  color: #3c6fa1;
+}
+
+@media (max-height: 720px) {
+  .welcome-content {
+    top: 110px;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 421px) {
+  .welcome-screen {
+    width: 100vw;
+    height: 100svh;
+    min-height: 620px;
+    border-radius: 0;
+  }
+
+  .welcome-content {
+    right: 32px;
+    left: 32px;
   }
 }
