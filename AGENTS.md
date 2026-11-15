@@ -1,19 +1,6 @@
-﻿<!-- BEGIN:nextjs-agent-rules -->
-
-## This is NOT the Next.js you know
-
-This version has breaking changes â€” APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` â€” verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
-Here is an `AGENTS.md` tailored to your Craft Supply Scanner project. It follows the emerging convention: plain Markdown at the repo root, focused on commands, architecture, and the specific gotchas your team (and any AI agent) will hit with this stack.
-
----
-
 # AGENTS.md
 
-Instructions for AI coding agents working on the Craft Supply Scanner & Project Suggester. Keep changes small, focused, and aligned with the existing patterns described here.
+Instructions for AI coding agents working on the Craft Supply Scanner & Project Suggester. Keep changes small, focused, and aligned with the existing patterns described here. Refer to `data_model.md` for the data model specification.
 
 ## Project Overview
 
