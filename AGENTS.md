@@ -1,10 +1,6 @@
-Here is an `AGENTS.md` tailored to your Craft Supply Scanner project. It follows the emerging convention: plain Markdown at the repo root, focused on commands, architecture, and the specific gotchas your team (and any AI agent) will hit with this stack.
-
----
-
 # AGENTS.md
 
-Instructions for AI coding agents working on the Craft Supply Scanner & Project Suggester. Keep changes small, focused, and aligned with the existing patterns described here.
+Instructions for AI coding agents working on the Craft Supply Scanner & Project Suggester. Keep changes small, focused, and aligned with the existing patterns described here. Refer to `data_model.md` for the data model specification.
 
 ## Project Overview
 
