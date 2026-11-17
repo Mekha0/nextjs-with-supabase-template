@@ -51,7 +51,7 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
-        cork: { DEFAULT: "hsl(var(--cork))", dark: "hsl(var(--cork-dark))" },
+        cork: { DEFAULT: "hsl(var(--cork))", input: "hsl(var(--cork-input))" },
         postit: {
           yellow: "hsl(var(--postit-yellow))",
           pink: "hsl(var(--postit-pink))",

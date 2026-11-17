@@ -24,3 +24,6 @@ export const updateItem = (
 
 export const deleteItem = (id: string) =>
   request<void>(`/api/items/${id}`, { method: "DELETE" });
+
+export const getItem = (id: string) =>
+  request<{ item: Item }>(`/api/items/${id}`).then((r) => r.item);
