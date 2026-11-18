@@ -54,7 +54,9 @@ All tables live in Supabase Postgres with RLS enabled. Every table has `id uuid 
 ### XP Constants
 
 - `XP_PER_CRAFT = 50`
-- `level = floor(xp / 500) + 1` (recomputed on completion)
+- `XP_PER_SUPPLY = 10` per unit added to inventory
+- `XP_PER_PROJECT_START = 20` on the first start of each project
+- `level = floor(xp / 200) + 1` (recomputed whenever XP is awarded)
 - Completing a craft updates `profiles.xp` and `profiles.level` transactionally through `complete_craft(craft_id)`.
 
 ### xp_levels

@@ -46,7 +46,7 @@ export async function updateCraft(
   id: string,
   input: UpdateCraftInput,
 ) {
-  if (input.status === "complete") {
+  if (input.status === "complete" || input.status === "in_progress") {
     const changes = { ...input };
     delete changes.status;
     if (Object.keys(changes).length > 0) {
@@ -61,7 +61,8 @@ export async function updateCraft(
       if (!updated) return { data: null, error: null };
     }
 
-    const { data, error } = await supabase.rpc("complete_craft", { p_craft_id: id });
+    const rpcName = input.status === "complete" ? "complete_craft" : "start_craft";
+    const { data, error } = await supabase.rpc(rpcName, { p_craft_id: id });
     if (error) return { data: null, error };
     if (!data) return { data: null, error: null };
     return {
