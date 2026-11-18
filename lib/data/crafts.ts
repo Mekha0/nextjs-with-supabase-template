@@ -47,10 +47,21 @@ export async function updateCraft(
   input: UpdateCraftInput,
 ) {
   if (input.status === "complete") {
-    const { data, error } = await supabase.rpc("complete_craft", {
-      p_craft_id: id,
-      p_changes: input,
-    });
+    const changes = { ...input };
+    delete changes.status;
+    if (Object.keys(changes).length > 0) {
+      const { data: updated, error: updateError } = await supabase
+        .from("crafts")
+        .update({ ...changes, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("user_id", userId)
+        .select("id")
+        .maybeSingle();
+      if (updateError) return { data: null, error: updateError };
+      if (!updated) return { data: null, error: null };
+    }
+
+    const { data, error } = await supabase.rpc("complete_craft", { p_craft_id: id });
     if (error) return { data: null, error };
     if (!data) return { data: null, error: null };
     return {

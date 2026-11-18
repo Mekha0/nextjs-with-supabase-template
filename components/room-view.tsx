@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Award, Package, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Me } from "@/lib/api/types";
 
 type CraftStatus = "todo" | "in_progress" | "complete";
 type Craft = { id: string; title: string; status: CraftStatus };
@@ -25,19 +26,25 @@ const RIBBONS = [
 export function RoomView({ name }: { name: string }) {
   const [crafts, setCrafts] = useState<Craft[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [progress, setProgress] = useState<Pick<Me, "xp" | "level">>({ xp: 0, level: 1 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const [c, i] = await Promise.all([
+        const [c, i, me] = await Promise.all([
           fetch("/api/crafts"),
           fetch("/api/items"),
+          fetch("/api/auth/me"),
         ]);
         if (c.ok) setCrafts((await c.json()).crafts ?? []);
         if (i.ok) {
           const data = await i.json();
           setItems(Array.isArray(data) ? data : (data.items ?? []));
+        }
+        if (me.ok) {
+          const data = await me.json();
+          setProgress({ xp: data.user.xp, level: data.user.level });
         }
       } finally {
         setLoading(false);
@@ -47,8 +54,6 @@ export function RoomView({ name }: { name: string }) {
 
   const byStatus = (s: CraftStatus) => crafts.filter((c) => c.status === s);
   const completed = byStatus("complete").length;
-  const level = 1 + Math.floor(completed / 3);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -58,7 +63,9 @@ export function RoomView({ name }: { name: string }) {
         </div>
         <div>
           <h1 className="text-xl font-semibold leading-tight">{name}</h1>
-          <p className="text-xs text-muted-foreground">Level {level}</p>
+          <p className="text-xs text-muted-foreground">
+            Level {progress.level} · {progress.xp} XP
+          </p>
         </div>
       </header>
 

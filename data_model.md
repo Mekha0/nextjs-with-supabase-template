@@ -55,6 +55,7 @@ All tables live in Supabase Postgres with RLS enabled. Every table has `id uuid 
 
 - `XP_PER_CRAFT = 50`
 - `level = floor(xp / 500) + 1` (recomputed on completion)
+- Completing a craft updates `profiles.xp` and `profiles.level` transactionally through `complete_craft(craft_id)`.
 
 ### xp_levels
 
