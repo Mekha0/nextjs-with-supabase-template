@@ -16,6 +16,7 @@ export type Craft = {
   description: string | null;
   status: CraftStatus;
   photo_url: string | null;
+  required_materials: string[];
   completed_at: string | null;
   created_at: string;
   updated_at: string;

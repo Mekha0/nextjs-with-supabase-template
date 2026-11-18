@@ -35,6 +35,7 @@ All tables live in Supabase Postgres with RLS enabled. Every table has `id uuid 
 | description | text | nullable |
 | status | text | todo \| in_progress \| complete |
 | photo_url | text | nullable |
+| required_materials | text[] | one unit of each is consumed when the craft is completed |
 | completed_at | timestamptz | nullable |
 | updated_at | timestamptz | |
 

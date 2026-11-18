@@ -10,6 +10,7 @@ export const createCraftSchema = z.object({
   description: nullableText(2000).optional(),
   status: craftStatusSchema.optional().default("todo"),
   photo_url: z.string().nullable().optional(),
+  required_materials: z.array(z.string().trim().min(1)).optional().default([]),
 }).strict();
 
 export const updateCraftSchema = z.object({

@@ -55,6 +55,12 @@ Expected: `401` with an `unauthorized` error response.
 Create a craft and save its ID for later requests:
 
 ```powershell
+$supply = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/items" `
+  -Headers $headers `
+  -Body (@{ name = 'Test felt'; quantity = 1 } | ConvertTo-Json)
+
 $created = Invoke-RestMethod `
   -Method Post `
   -Uri "$base/api/crafts" `
@@ -63,6 +69,7 @@ $created = Invoke-RestMethod `
     title = 'Test paper flowers'
     description = 'Temporary API test craft'
     photo_url = $null
+    required_materials = @('Test felt')
   } | ConvertTo-Json)
 
 $created.craft
@@ -131,6 +138,15 @@ $completed
 ```
 
 Expected: `200 OK`; `craft.status` is `complete`, `completed_at` is set, and `user` reports XP and level. The first completion should increase XP by 50.
+The test craft should also consume one unit of `Test felt`. Check the inventory:
+
+```powershell
+$remaining = (Invoke-RestMethod -Method Get -Uri "$base/api/items" -Headers $headers).items |
+  Where-Object { $_.name -eq 'Test felt' }
+$remaining
+```
+
+Expected: no matching row, because its quantity reached zero. If you created it with quantity 2, it should remain with quantity 1. Only owned `required_materials` are consumed; tools are not.
 
 Send the same completion request again:
 

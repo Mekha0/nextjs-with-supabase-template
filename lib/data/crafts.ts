@@ -5,7 +5,7 @@ import type { z } from "zod";
 import type { createCraftSchema, updateCraftSchema } from "@/lib/validation/crafts";
 
 const CRAFT_COLUMNS =
-  "id, title, description, status, photo_url, completed_at, created_at, updated_at";
+  "id, title, description, status, photo_url, required_materials, completed_at, created_at, updated_at";
 
 export type CreateCraftInput = z.infer<typeof createCraftSchema>;
 export type UpdateCraftInput = z.infer<typeof updateCraftSchema>;

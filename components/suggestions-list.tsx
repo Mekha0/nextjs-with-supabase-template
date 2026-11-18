@@ -126,6 +126,7 @@ export function SuggestionsList() {
               title: s.title.trim().slice(0, 128),
               description: buildDescription(s),
               status,
+              required_materials: s.required_materials,
             }),
           });
       const data = await res.json().catch(() => ({}));
