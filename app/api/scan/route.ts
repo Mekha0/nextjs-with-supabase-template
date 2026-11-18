@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 const WORKFLOW_URL =
-  "https://serverless.roboflow.com/me995802-ucf-edu/workflows/yolo-gwc11-izfl6";
+  process.env.ROBOFLOW_WORKFLOW_URL ??
+  "https://serverless.roboflow.com/infer/workflows/me995802-ucf-edu/yolo-gwc11-izfl6";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 type Candidate = { name: string; confidence: number };
