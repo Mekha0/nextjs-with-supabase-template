@@ -4,7 +4,7 @@ import * as z from "zod";
 export const Suggestion = z.object({
   title: z.string(),
   description: z.string(),
-  link: z.string().nullable(),
+  link: z.string().url().nullable(),
   required_materials: z.array(z.string()),
   required_tools: z.array(z.string()),
   missing_materials: z.array(z.string()), // yes

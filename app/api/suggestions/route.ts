@@ -58,6 +58,7 @@ export async function GET(request: Request) {
     const notOwned = s.required_materials.filter(m => !owned.includes(m.toLowerCase()));
     const missing = [...notOwned, ...s.missing_materials];
     if (missing.length > 0 && !allowExtra) continue;
+    if (!s.link) continue;
 
     suggestions.push({
       title: s.title,
