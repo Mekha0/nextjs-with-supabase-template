@@ -1,100 +1,138 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Camera, ImagePlus, RotateCcw } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type ScanState = "idle" | "scanning" | "done" | "error";
-type Candidate = { id: string; name: string; confidence: number; accepted: boolean };
+type Candidate = {
+  id: string;
+  name: string;
+  confidence: number;
+  accepted: boolean;
+};
+type Notice = { text: string; tone: "error" | "success" } | null;
 
 export function MaterialScanner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [cameraOn, setCameraOn] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [manualName, setManualName] = useState("");
   const [state, setState] = useState<ScanState>("idle");
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<Notice>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => () => streamRef.current?.getTracks().forEach((track) => track.stop()), []);
+  const error = (text: string) => setNotice({ text, tone: "error" });
+
+  function stopCamera() {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setCameraOn(false);
+  }
+
+  useEffect(
+    () => () => streamRef.current?.getTracks().forEach((t) => t.stop()),
+    [],
+  );
+
+  function reset() {
+    setPhoto(null);
+    setCandidates([]);
+    setState("idle");
+    setNotice(null);
+  }
 
   async function startCamera() {
-    setMessage("");
+    setNotice(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" } },
         audio: false,
       });
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
+      setCameraOn(true);
     } catch {
-      setMessage("Camera access failed. Use the photo upload option or check your browser permissions.");
+      error(
+        "Camera access failed. Choose a photo instead, or check your browser permissions.",
+      );
     }
   }
 
   function takePhoto() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) {
-      setMessage("Wait for the camera preview, then try again.");
+      error("Wait for the camera preview, then try again.");
       return;
     }
-    const maxWidth = 1280;
-    const scale = Math.min(1, maxWidth / video.videoWidth);
+    const scale = Math.min(1, 1280 / video.videoWidth);
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
-    canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas
+      .getContext("2d")
+      ?.drawImage(video, 0, 0, canvas.width, canvas.height);
     setPhoto(canvas.toDataURL("image/jpeg", 0.85));
     setCandidates([]);
     setState("idle");
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
+    stopCamera();
   }
 
   async function handleUpload(file?: File) {
     if (!file) return;
-    if (!["image/jpeg", "image/png"].includes(file.type)) {
-      setMessage("Choose a JPEG or PNG image.");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setMessage("Choose an image that is 10 MB or smaller.");
-      return;
-    }
+    if (!["image/jpeg", "image/png"].includes(file.type))
+      return error("Choose a JPEG or PNG image.");
+    if (file.size > 10 * 1024 * 1024)
+      return error("Choose an image that is 10 MB or smaller.");
+
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
       reader.onerror = () => reject(new Error("Could not read that image."));
       reader.readAsDataURL(file);
     });
+    stopCamera();
     setPhoto(dataUrl);
     setCandidates([]);
     setState("idle");
-    setMessage("");
+    setNotice(null);
   }
 
   async function scan() {
     if (!photo) return;
     setState("scanning");
-    setMessage("");
+    setNotice(null);
     try {
       const imageBlob = await (await fetch(photo)).blob();
       const formData = new FormData();
-      formData.append("image", imageBlob, imageBlob.type === "image/png" ? "scan.png" : "scan.jpg");
-      const response = await fetch("/api/scan", { method: "POST", body: formData });
+      formData.append(
+        "image",
+        imageBlob,
+        imageBlob.type === "image/png" ? "scan.png" : "scan.jpg",
+      );
+      const response = await fetch("/api/scan", {
+        method: "POST",
+        body: formData,
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "The scan failed.");
       setCandidates(
-        (data.candidates ?? []).map((candidate: { name: string; confidence: number }) => ({
-          ...candidate,
-          id: crypto.randomUUID(),
-          accepted: true,
-        })),
+        (data.candidates ?? []).map(
+          (c: { name: string; confidence: number }) => ({
+            ...c,
+            id: crypto.randomUUID(),
+            accepted: true,
+          }),
+        ),
       );
       setState("done");
-    } catch (error) {
+    } catch (e) {
       setState("error");
-      setMessage(error instanceof Error ? error.message : "The scan failed.");
+      error(e instanceof Error ? e.message : "The scan failed.");
     }
   }
 
@@ -102,118 +140,226 @@ export function MaterialScanner() {
     event.preventDefault();
     const name = manualName.trim();
     if (!name) return;
-    setCandidates((current) => [...current, { id: crypto.randomUUID(), name, confidence: 0, accepted: true }]);
+    setCandidates((cur) => [
+      ...cur,
+      { id: crypto.randomUUID(), name, confidence: 0, accepted: true },
+    ]);
     setManualName("");
   }
 
   async function saveAcceptedCandidates() {
-    const toSave = candidates.filter((candidate) => candidate.accepted && candidate.name.trim());
-    if (!toSave.length) {
-      setMessage("Select or add at least one supply first.");
-      return;
-    }
+    const toSave = candidates.filter((c) => c.accepted && c.name.trim());
+    if (!toSave.length)
+      return error("Select or add at least one supply first.");
 
     setSaving(true);
-    setMessage("");
+    setNotice(null);
     let saved = 0;
+    const summary = () =>
+      `${saved} ${saved === 1 ? "supply was" : "supplies were"} added.`;
     try {
       for (const candidate of toSave) {
         const response = await fetch("/api/items", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: candidate.name.trim(), quantity: 1, photo_url: null }),
+          body: JSON.stringify({
+            name: candidate.name.trim(),
+            quantity: 1,
+            photo_url: null,
+          }),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message ?? `Could not add ${candidate.name}.`);
+        if (!response.ok)
+          throw new Error(
+            data.error?.message ?? `Could not add ${candidate.name}.`,
+          );
         saved += 1;
-        setCandidates((current) => current.filter((item) => item.id !== candidate.id));
+        setCandidates((cur) => cur.filter((item) => item.id !== candidate.id));
       }
-      setMessage(`${saved} ${saved === 1 ? "supply was" : "supplies were"} added.`);
-    } catch (error) {
-      setMessage(
-        saved
-          ? `${saved} ${saved === 1 ? "supply was" : "supplies were"} added. ${error instanceof Error ? error.message : "The next item could not be added."}`
-          : error instanceof Error ? error.message : "Could not add supplies.",
-      );
+      setNotice({ text: summary(), tone: "success" });
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "Could not add supplies.";
+      error(saved ? `${summary()} ${reason}` : reason);
     } finally {
       setSaving(false);
     }
   }
 
-  return (
-    <section className="mx-auto w-full max-w-2xl space-y-5 rounded-xl border bg-card p-5 text-card-foreground shadow-sm">
-      <div>
-        <h1 className="text-2xl font-semibold">Scan your crafting materials</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Take a photo or choose one to identify the items in view.</p>
-      </div>
+  const updateCandidate = (id: string, patch: Partial<Candidate>) =>
+    setCandidates((cur) =>
+      cur.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    );
 
-      <div className="overflow-hidden rounded-lg bg-black">
+  return (
+    <div className="space-y-5">
+      {/* Preview */}
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl bg-cork-input shadow-inner">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={photo} alt="Selected materials to scan" className="max-h-[65vh] w-full object-contain" />
+          <img
+            src={photo}
+            alt="Selected materials to scan"
+            className="h-full w-full object-cover"
+          />
         ) : (
-          <video ref={videoRef} autoPlay playsInline className="max-h-[65vh] min-h-64 w-full object-contain" />
+          <>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={cn(
+                "h-full w-full object-cover",
+                !cameraOn && "hidden",
+              )}
+            />
+            {!cameraOn && (
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-foreground/50">
+                <ImagePlus className="h-16 w-16" strokeWidth={1.25} />
+                <p className="text-sm">Photograph your craft supplies</p>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        {!photo && <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground" onClick={startCamera}>Start camera</button>}
-        {!photo && <button className="rounded-md border px-4 py-2" onClick={takePhoto}>Take photo</button>}
-        {photo && <button className="rounded-md border px-4 py-2" onClick={() => { setPhoto(null); setCandidates([]); setState("idle"); }}>Retake / choose another</button>}
-        {photo && <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50" onClick={scan} disabled={state === "scanning"}>{state === "scanning" ? "Scanning…" : "Identify materials"}</button>}
-        <label className="cursor-pointer rounded-md border px-4 py-2">
-          Choose photo
-          <input className="sr-only" type="file" accept="image/jpeg,image/png" capture="environment" onChange={(event) => void handleUpload(event.target.files?.[0])} />
-        </label>
+      {/* Actions */}
+      <div className="space-y-3">
+        {!photo && !cameraOn && (
+          <Button className="h-12 w-full rounded-full" onClick={startCamera}>
+            <Camera className="mr-2 h-4 w-4" /> Start camera
+          </Button>
+        )}
+        {!photo && cameraOn && (
+          <Button className="h-12 w-full rounded-full" onClick={takePhoto}>
+            Capture
+          </Button>
+        )}
+        {photo && (
+          <Button
+            className="h-12 w-full rounded-full"
+            onClick={scan}
+            disabled={state === "scanning"}
+          >
+            {state === "scanning" ? "Scanning…" : "Identify materials"}
+          </Button>
+        )}
+
+        <div className="flex gap-3">
+          <label
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "h-11 flex-1 cursor-pointer rounded-full",
+            )}
+          >
+            <ImagePlus className="mr-2 h-4 w-4" /> Choose photo
+            <input
+              className="sr-only"
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={(e) => void handleUpload(e.target.files?.[0])}
+            />
+          </label>
+          {photo && (
+            <Button
+              variant="outline"
+              className="h-11 flex-1 rounded-full"
+              onClick={reset}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" /> Retake
+            </Button>
+          )}
+        </div>
       </div>
 
-      {message && <p role="alert" className="text-sm text-destructive">{message}</p>}
+      {notice && (
+        <p
+          role={notice.tone === "error" ? "alert" : "status"}
+          className={cn(
+            "text-sm",
+            notice.tone === "error" ? "text-destructive" : "text-primary",
+          )}
+        >
+          {notice.text}
+        </p>
+      )}
+
+      {/* Review */}
       {state === "done" && (
-        <div className="space-y-3">
+        <section className="space-y-4 rounded-3xl bg-cork p-4 shadow-md">
           <div>
             <h2 className="font-medium">Review detected supplies</h2>
-            <p className="text-sm text-muted-foreground">Edit or remove names before adding them to your supplies.</p>
+            <p className="text-sm text-foreground/70">
+              Edit or uncheck names before adding them.
+            </p>
           </div>
+
           {candidates.length ? (
             <ul className="space-y-2">
-              {candidates.map((candidate) => (
-                <li key={candidate.id} className="flex items-center gap-3 rounded-md border p-3">
+              {candidates.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex items-center gap-3 rounded-xl bg-cork-input p-2.5"
+                >
                   <input
-                    aria-label={`Accept ${candidate.name}`}
+                    aria-label={`Accept ${c.name}`}
                     type="checkbox"
-                    checked={candidate.accepted}
-                    onChange={(event) => setCandidates((current) => current.map((item) => item.id === candidate.id ? { ...item, accepted: event.target.checked } : item))}
+                    className="h-4 w-4 accent-[hsl(var(--primary))]"
+                    checked={c.accepted}
+                    onChange={(e) =>
+                      updateCandidate(c.id, { accepted: e.target.checked })
+                    }
                   />
                   <input
                     aria-label="Supply name"
-                    className="min-w-0 flex-1 rounded border bg-background px-2 py-1"
-                    value={candidate.name}
-                    onChange={(event) => setCandidates((current) => current.map((item) => item.id === candidate.id ? { ...item, name: event.target.value } : item))}
+                    className="min-w-0 flex-1 bg-transparent px-1 py-1 text-sm outline-none"
+                    value={c.name}
+                    onChange={(e) =>
+                      updateCandidate(c.id, { name: e.target.value })
+                    }
                   />
-                  {candidate.confidence > 0 && <span className="text-xs text-muted-foreground">{Math.round(candidate.confidence * 100)}%</span>}
+                  {c.confidence > 0 && (
+                    <span className="text-xs text-foreground/60">
+                      {Math.round(c.confidence * 100)}%
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground">No items were detected. Add a supply below.</p>
+            <p className="text-sm text-foreground/70">
+              No items were detected. Add a supply below.
+            </p>
           )}
+
           <form className="flex gap-2" onSubmit={addManualCandidate}>
             <input
               aria-label="Add a supply manually"
-              className="min-w-0 flex-1 rounded-md border bg-background px-3 py-2"
+              className="h-10 min-w-0 flex-1 rounded-full bg-cork-input px-4 text-sm outline-none focus:ring-2 focus:ring-primary"
               placeholder="Add a supply manually"
               value={manualName}
-              onChange={(event) => setManualName(event.target.value)}
+              onChange={(e) => setManualName(e.target.value)}
             />
-            <button className="rounded-md border px-3 py-2" type="submit">Add</button>
+            <Button
+              type="submit"
+              variant="outline"
+              className="h-10 rounded-full"
+            >
+              Add
+            </Button>
           </form>
-          {candidates.some((candidate) => candidate.accepted) && (
-            <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50" onClick={saveAcceptedCandidates} disabled={saving}>
+
+          {candidates.some((c) => c.accepted) && (
+            <Button
+              className="h-12 w-full rounded-full"
+              onClick={saveAcceptedCandidates}
+              disabled={saving}
+            >
               {saving ? "Adding supplies…" : "Add accepted supplies"}
-            </button>
+            </Button>
           )}
-        </div>
+        </section>
       )}
-    </section>
+    </div>
   );
 }
