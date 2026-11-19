@@ -10,6 +10,7 @@ type ScanState = "idle" | "scanning" | "done" | "error";
 type Candidate = {
   id: string;
   name: string;
+  quantity: number;
   confidence: number;
   accepted: boolean;
   fromScan: boolean; // false for supplies typed in by hand
@@ -141,6 +142,7 @@ export function MaterialScanner() {
           (c: { name: string; confidence: number }) => ({
             ...c,
             id: crypto.randomUUID(),
+            quantity: 1,
             accepted: true,
             fromScan: true,
           }),
@@ -162,6 +164,7 @@ export function MaterialScanner() {
       {
         id: crypto.randomUUID(),
         name,
+        quantity: 1,
         confidence: 0,
         accepted: true,
         fromScan: false,
@@ -211,7 +214,7 @@ export function MaterialScanner() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: candidate.name.trim(),
-            quantity: 1,
+            quantity: candidate.quantity,
             photo_url: usePhoto,
           }),
         });
@@ -338,7 +341,7 @@ export function MaterialScanner() {
           <div>
             <h2 className="font-medium">Review detected supplies</h2>
             <p className="text-sm text-foreground/70">
-              Edit or uncheck names before adding them.
+              Edit names and quantities, or uncheck supplies before adding them.
             </p>
           </div>
 
@@ -347,7 +350,7 @@ export function MaterialScanner() {
               {candidates.map((c) => (
                 <li
                   key={c.id}
-                  className="flex items-center gap-3 rounded-xl bg-cork-input p-2.5"
+                  className="flex flex-wrap items-center gap-2 rounded-xl bg-cork-input p-2.5"
                 >
                   <input
                     aria-label={`Accept ${c.name}`}
@@ -360,12 +363,32 @@ export function MaterialScanner() {
                   />
                   <input
                     aria-label="Supply name"
-                    className="min-w-0 flex-1 bg-transparent px-1 py-1 text-sm outline-none"
+                    className="min-w-0 flex-1 basis-24 bg-transparent px-1 py-1 text-sm outline-none"
                     value={c.name}
                     onChange={(e) =>
                       updateCandidate(c.id, { name: e.target.value })
                     }
                   />
+                  <label className="flex items-center gap-1 text-xs text-foreground/60">
+                    Qty
+                    <input
+                      aria-label={`Quantity for ${c.name}`}
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      step={1}
+                      value={c.quantity}
+                      onChange={(e) =>
+                        updateCandidate(c.id, {
+                          quantity: Math.max(
+                            1,
+                            Number.parseInt(e.target.value, 10) || 1,
+                          ),
+                        })
+                      }
+                      className="h-8 w-16 rounded-lg bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </label>
                   {c.confidence > 0 && (
                     <span className="text-xs text-foreground/60">
                       {Math.round(c.confidence * 100)}%
