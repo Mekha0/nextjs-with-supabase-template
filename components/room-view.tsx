@@ -8,7 +8,12 @@ import type { Me } from "@/lib/api/types";
 
 type CraftStatus = "todo" | "in_progress" | "complete";
 type Craft = { id: string; title: string; status: CraftStatus };
-type Item = { id: string; name: string; quantity?: number; photo_url?: string | null };
+type Item = {
+  id: string;
+  name: string;
+  quantity?: number;
+  photo_url?: string | null;
+};
 
 const SUPPLY_COLORS = [
   {
@@ -56,7 +61,10 @@ const RIBBONS = [
 export function RoomView({ name }: { name: string }) {
   const [crafts, setCrafts] = useState<Craft[]>([]);
   const [items, setItems] = useState<Item[]>([]);
-  const [progress, setProgress] = useState<Pick<Me, "xp" | "level">>({ xp: 0, level: 1 });
+  const [progress, setProgress] = useState<Pick<Me, "xp" | "level">>({
+    xp: 0,
+    level: 1,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -87,14 +95,14 @@ export function RoomView({ name }: { name: string }) {
   return (
     <div className="space-y-8 pb-3">
       {/* Header */}
-      <header className="flex items-center justify-between gap-3 px-1 pt-1">
+      <header className="font-display flex items-center justify-between gap-3 px-1 pt-1">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--green-600))] text-lg font-semibold uppercase text-primary-foreground">
+          <div className="font-display flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--green-600))] text-lg uppercase text-primary-foreground">
             {name.charAt(0)}
           </div>
           <div>
-            <h1 className="truncate text-2xl font-bold leading-tight">{name}</h1>
-            <p className="text-[13px] font-medium text-muted-foreground">
+            <h1 className="truncate text-2xl leading-tight">{name}</h1>
+            <p className="font-sans text-[13px] font-medium text-muted-foreground">
               Level {progress.level} · {progress.xp} XP
             </p>
           </div>
@@ -106,12 +114,7 @@ export function RoomView({ name }: { name: string }) {
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/shopping-cart.svg"
-            alt=""
-            width={29}
-            height={29}
-          />
+          <img src="/shopping-cart.svg" alt="" width={29} height={29} />
         </Link>
       </header>
 
@@ -133,7 +136,9 @@ export function RoomView({ name }: { name: string }) {
               <Plus className="h-4 w-4" /> Scan your first supply
             </Link>
           ) : (
-            <div className={cn("relative", items.length > 4 ? "w-max" : "w-full")}>
+            <div
+              className={cn("relative", items.length > 4 ? "w-max" : "w-full")}
+            >
               <span
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-x-0 top-[16px] z-20 h-[3px] bg-[#8e6548] shadow-[0_1px_1px_rgba(59,47,42,0.5)]"
@@ -142,9 +147,7 @@ export function RoomView({ name }: { name: string }) {
                 href="/inventory"
                 className={cn(
                   "relative flex gap-2",
-                  items.length > 4
-                    ? "w-max"
-                    : "w-full justify-evenly",
+                  items.length > 4 ? "w-max" : "w-full justify-evenly",
                 )}
                 aria-label="Open your supplies"
               >
@@ -298,11 +301,18 @@ function PostIt({
         className,
       )}
     >
-      <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary/80" aria-hidden="true" />
-      <p className="text-center text-sm font-bold leading-tight">{title}</p>
-      <p className="mt-1 text-center text-2xl font-bold">{crafts.length}</p>
+      <span
+        className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary/80"
+        aria-hidden="true"
+      />
+      <p className="text-center text-lg font-display font-light leading-tight">
+        {title}
+      </p>
+      <p className="mt-1 text-center text-2xl font-display font-bold">
+        {crafts.length}
+      </p>
       {crafts.length > 0 ? (
-        <ul className="mt-1 space-y-0.5 text-[11px] text-foreground/80">
+        <ul className="mt-1 space-y-0.5 text-[12px] text-center text-foreground/80">
           {crafts.slice(0, 2).map((c) => (
             <li key={c.id} className="truncate">
               {c.title}
@@ -310,7 +320,9 @@ function PostIt({
           ))}
         </ul>
       ) : (
-        <p className="mt-1 text-[11px] text-foreground/60">Nothing here yet</p>
+        <p className="mt-1 text-[12px] text-center text-foreground/60">
+          Nothing here yet
+        </p>
       )}
     </Link>
   );

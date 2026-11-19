@@ -53,7 +53,7 @@ export function InventoryGrid() {
   return (
     <div className="space-y-5">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Your Supplies</h1>
+        <h1 className="font-display text-4xl  tracking-tight">Your Supplies</h1>
         <button
           type="button"
           onClick={() => setAdding(true)}

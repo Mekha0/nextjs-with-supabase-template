@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ExternalLink, Hammer } from "lucide-react";
+import { ExternalLink, Hammer, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/sheet";
 import { cn } from "@/lib/utils";
@@ -89,11 +89,20 @@ export function CraftsList() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">My Projects</h1>
-        <p className="text-sm text-muted-foreground">
-          Pick up where you left off.
-        </p>
+      <header className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-display tracking-tight">My Projects</h1>
+          <p className="text-sm text-muted-foreground">
+            Pick up where you left off.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          asChild
+          className="mx-0 h-8 w-auto shrink-0 px-3.5 text-xs"
+        >
+          <Link href="/home">Home</Link>
+        </Button>
       </header>
 
       <div
