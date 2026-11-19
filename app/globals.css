@@ -83,17 +83,22 @@
 
 @layer components {
   .navbar-cutout {
-    -webkit-mask-image: radial-gradient(
-      ellipse 50px 44px at var(--nav-active-x) 0,
-      transparent 0 43px,
-      #000 44px
-    );
-    mask-image: radial-gradient(
-      ellipse 50px 44px at var(--nav-active-x) 0,
-      transparent 0 43px,
-      #000 44px
-    );
-    transition: --nav-active-x 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    left: -50.3575px;
+    width: calc(100% + 100.715px);
+    -webkit-mask-image: url("/navbar/figma-notch.svg"),
+      linear-gradient(#000 0 0);
+    -webkit-mask-size: 100.715px 42px, 100% 100%;
+    -webkit-mask-position: var(--nav-active-x) 0, 0 0;
+    -webkit-mask-repeat: no-repeat, no-repeat;
+    -webkit-mask-composite: xor;
+    mask-image: url("/navbar/figma-notch.svg"), linear-gradient(#000 0 0);
+    mask-size: 100.715px 42px, 100% 100%;
+    mask-position: var(--nav-active-x) 0, 0 0;
+    mask-repeat: no-repeat, no-repeat;
+    mask-composite: exclude;
+    transition:
+      --nav-active-x 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      mask-position 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   .navbar-active {

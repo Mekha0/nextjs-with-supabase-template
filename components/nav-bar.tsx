@@ -16,6 +16,7 @@ const tabs = [
     icon: Search,
   },
 ];
+const ACTIVE_POSITIONS = ["16.55%", "38.8%", "61.05%", "83.3%"];
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -28,16 +29,19 @@ export default function Navbar() {
   );
   const ActiveIcon = tabs[activeIndex].icon;
   const navStyle = {
-    "--nav-active-x": `${((activeIndex + 0.5) / tabs.length) * 100}%`,
+    "--nav-active-x": ACTIVE_POSITIONS[activeIndex],
   } as CSSProperties;
 
   return (
     <nav
       aria-label="Main navigation"
-      className="fixed bottom-0 left-0 z-50 h-[calc(105px+env(safe-area-inset-bottom))] w-full bg-transparent"
+      className="fixed bottom-0 left-0 z-50 h-[calc(105px+env(safe-area-inset-bottom))] w-full overflow-hidden bg-transparent"
       style={navStyle}
     >
-      <div aria-hidden="true" className="navbar-cutout absolute inset-x-0 bottom-0 h-[calc(83px+env(safe-area-inset-bottom))] bg-primary" />
+      <div
+        aria-hidden="true"
+        className="navbar-cutout absolute bottom-0 h-[calc(83px+env(safe-area-inset-bottom))] bg-primary"
+      />
 
       <div
         aria-hidden="true"
@@ -50,7 +54,7 @@ export default function Navbar() {
         />
       </div>
 
-      <div className="absolute inset-x-0 bottom-[env(safe-area-inset-bottom)] flex h-[83px] items-center">
+      <div className="absolute inset-x-[5.4%] bottom-[env(safe-area-inset-bottom)] flex h-[83px] items-center">
         {tabs.map(({ id, label, path, icon: Icon }, index) => {
           const isActive = activeIndex === index;
           return (
