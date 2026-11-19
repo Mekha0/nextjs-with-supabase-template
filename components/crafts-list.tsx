@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/sheet";
 import { cn } from "@/lib/utils";
 import { PhotoPicker } from "@/components/photo-picker";
-import { removePhoto, uploadPhoto } from "@/lib/storage/photos";
+import { removePhoto, uploadPhoto } from "@/lib/storage/img-bucket";
 
 type CraftStatus = "todo" | "in_progress" | "complete";
 type Craft = {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
-import { MAX_UPLOAD_BYTES } from "@/lib/storage/photos";
+import { MAX_UPLOAD_BYTES } from "@/lib/storage/img-bucket";
 
 export function PhotoPicker({
   file,

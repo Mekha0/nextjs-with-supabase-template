@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, ImagePlus, RotateCcw } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { removePhoto, uploadPhoto } from "@/lib/storage/photos";
+import { removePhoto, uploadPhoto } from "@/lib/storage/img-bucket";
 import { cn } from "@/lib/utils";
 
 type ScanState = "idle" | "scanning" | "done" | "error";
