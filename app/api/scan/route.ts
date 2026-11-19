@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const WORKFLOW_URL =
-  process.env.ROBOFLOW_WORKFLOW_URL ??
-  "https://serverless.roboflow.com/infer/workflows/me995802-ucf-edu/yolo-gwc11-izfl6";
+const MODEL_URL =
+  process.env.ROBOFLOW_MODEL_URL ??
+  "https://serverless.roboflow.com/me995802-ucf-edu/yolo-gwc11-izfl6-4-yolo26s-t1";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
-type Candidate = { name: string; confidence: number };
+type Candidate = { name: string; confidence: number; quantity: number };
 
 class RoboflowRequestError extends Error {
   constructor(message: string, readonly status?: number) {
@@ -41,9 +41,11 @@ function extractCandidates(value: unknown): Candidate[] {
     ) {
       const name = rawName.trim();
       const current = candidates.get(name);
-      if (!current || confidence > current.confidence) {
-        candidates.set(name, { name, confidence });
-      }
+      candidates.set(name, {
+        name,
+        confidence: Math.max(current?.confidence ?? 0, confidence),
+        quantity: (current?.quantity ?? 0) + 1,
+      });
     }
 
     Object.values(record).forEach(visit);
@@ -53,7 +55,7 @@ function extractCandidates(value: unknown): Candidate[] {
   return [...candidates.values()].sort((a, b) => b.confidence - a.confidence);
 }
 
-async function runWorkflow(image: File): Promise<unknown> {
+async function runModel(image: File): Promise<unknown> {
   const apiKey = process.env.ROBOFLOW_API_KEY;
   if (!apiKey) throw new RoboflowRequestError("The server is missing ROBOFLOW_API_KEY.");
 
@@ -62,15 +64,13 @@ async function runWorkflow(image: File): Promise<unknown> {
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      const response = await fetch(WORKFLOW_URL, {
+      const response = await fetch(MODEL_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          inputs: { image: { type: "base64", value: imageBase64 } },
-        }),
+        body: imageBase64,
         signal: AbortSignal.timeout(30_000),
       });
 
@@ -130,11 +130,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const workflowResult = await runWorkflow(image);
-    return NextResponse.json({ candidates: extractCandidates(workflowResult) });
+    const modelResult = await runModel(image);
+    return NextResponse.json({ candidates: extractCandidates(modelResult) });
   } catch (error) {
     console.error(
-      "Roboflow workflow request failed",
+      "Roboflow model request failed",
       error instanceof Error ? error.message : "Unknown error",
     );
     return NextResponse.json(

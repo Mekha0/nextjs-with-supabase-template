@@ -34,6 +34,7 @@ export async function addCompletedCraft(input: {
   title: string;
   description?: string | null;
   photo_url?: string | null;
+  required_materials?: string[];
 }) {
   const craft = await createCraft({ ...input, status: "todo" });
   return completeCraft(craft.id, input.photo_url);

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { errorMessage } from "@/lib/api/http";
 import { uploadPhoto } from "@/lib/storage/photos";
+import { cn } from "@/lib/utils";
 
 const MAX_QUANTITY = 2_147_483_647;
 
@@ -23,6 +24,7 @@ type Props = {
   onSave: (values: ItemFormValues) => Promise<void>;
   onCancel: () => void;
   onDelete?: () => Promise<void>;
+  variant?: "default" | "editor";
 };
 
 export function AddItemForm({
@@ -32,7 +34,10 @@ export function AddItemForm({
   onSave,
   onCancel,
   onDelete,
+  variant = "default",
 }: Props) {
+  const editor = variant === "editor";
+  const equalActionButtons = Boolean(onDelete);
   const [name, setName] = useState(initial?.name ?? "");
   const [quantityText, setQuantityText] = useState(
     String(initial?.quantity ?? 1),
@@ -94,16 +99,33 @@ export function AddItemForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="item-name">Type</Label>
+    <form
+      onSubmit={handleSubmit}
+      className={cn("flex flex-col gap-4", editor && "gap-3")}
+    >
+      <div
+        className={cn(
+          "flex flex-col gap-2",
+          editor && "grid grid-cols-[84px_minmax(0,1fr)] items-center gap-3",
+        )}
+      >
+        <Label
+          htmlFor="item-name"
+          className={cn(editor && "text-[18px] font-normal text-[#1f3d2a]")}
+        >
+          {editor ? "Type:" : "Type"}
+        </Label>
         <Input
           id="item-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={64}
           placeholder="Yarn"
-          className="rounded-full border-border bg-input"
+          className={cn(
+            "rounded-full border-border bg-input",
+            editor &&
+              "h-[37px] rounded-[16px] border-[#946f50] bg-[#f5e5d1] px-3 text-[18px] font-normal text-[#1f3d2a] shadow-none",
+          )}
         />
         {nameOptions && nameOptions.length > 1 && (
           <div className="flex flex-wrap gap-2">
@@ -121,8 +143,18 @@ export function AddItemForm({
         )}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="item-qty">Quantity</Label>
+      <div
+        className={cn(
+          "flex flex-col gap-2",
+          editor && "grid grid-cols-[84px_minmax(0,1fr)] items-center gap-3",
+        )}
+      >
+        <Label
+          htmlFor="item-qty"
+          className={cn(editor && "text-[18px] font-normal text-[#1f3d2a]")}
+        >
+          {editor ? "Quantity:" : "Quantity"}
+        </Label>
         <Input
           id="item-qty"
           type="number"
@@ -131,16 +163,29 @@ export function AddItemForm({
           step={1}
           value={quantityText}
           onChange={(e) => setQuantityText(e.target.value)}
-          className="rounded-full border-border bg-input"
+          className={cn(
+            "rounded-full border-border bg-input",
+            editor &&
+              "h-[37px] rounded-[16px] border-[#946f50] bg-[#f5e5d1] px-3 text-[18px] font-normal text-[#1f3d2a] shadow-none",
+          )}
         />
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Photo</Label>
+        <Label
+          className={cn(editor && "text-[18px] font-normal text-[#1f3d2a]")}
+        >
+          {editor ? "Insert Photo:" : "Photo"}
+        </Label>
         <PhotoField
           initialUrl={initial?.photo_url ?? null}
           initialFile={initialPhotoFile}
           onChange={setPhoto}
+          className={cn(
+            editor &&
+              "mx-auto w-[calc(100%-24px)] max-w-[313px] rounded-[15px] bg-[#fff6ef] shadow-[0_8px_24px_rgba(59,47,42,0.1)]",
+          )}
+          placeholderIconSrc={editor ? "/material-editor/photo-upload.svg" : undefined}
         />
       </div>
 
@@ -150,16 +195,28 @@ export function AddItemForm({
         </p>
       )}
 
-      <div className="flex gap-3">
+      <div
+        className={cn(
+          "flex gap-3",
+          equalActionButtons && "grid w-full grid-cols-2",
+          editor && "mx-auto max-w-[334px] gap-6",
+        )}
+      >
         {onDelete ? (
           <Button
             type="button"
             variant="destructive"
             disabled={busy}
             onClick={handleDelete}
-            className="flex-1 rounded-full"
+            className={cn(
+              equalActionButtons
+                ? "h-[50px] w-full min-w-0 flex-none rounded-full"
+                : "flex-1 rounded-full",
+              editor &&
+                "rounded-[28px] border-[3px] border-[#8a2c2c] bg-[#b55353] text-[20px] font-bold text-[#fff2db] hover:bg-[#a84949]",
+            )}
           >
-            {confirmDelete ? "Tap again to delete" : "Delete"}
+            {confirmDelete ? (editor ? "Confirm?" : "Tap again to delete") : "Delete"}
           </Button>
         ) : (
           <Button
@@ -167,12 +224,28 @@ export function AddItemForm({
             variant="outline"
             disabled={busy}
             onClick={onCancel}
-            className="flex-1 rounded-full"
+            className={cn(
+              equalActionButtons
+                ? "h-[50px] w-full min-w-0 flex-none rounded-full"
+                : "flex-1 rounded-full",
+              editor &&
+                "rounded-[28px] border-[3px] border-[#496944] bg-[#496944] text-[20px] font-bold text-[#fff2db] hover:bg-[#3e5d3a]",
+            )}
           >
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={busy} className="flex-1 rounded-full">
+        <Button
+          type="submit"
+          disabled={busy}
+          className={cn(
+            equalActionButtons
+              ? "h-[50px] w-full min-w-0 flex-none rounded-full"
+              : "flex-1 rounded-full",
+            editor &&
+              "rounded-[28px] border-[3px] border-[#496944] bg-[#496944] text-[20px] font-bold text-[#fff2db] hover:bg-[#3e5d3a]",
+          )}
+        >
           {busy ? "Saving…" : "Save"}
         </Button>
       </div>

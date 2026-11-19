@@ -2,12 +2,15 @@
 
 import { useRef, useState } from "react";
 import { ImagePlus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Props = {
   initialUrl?: string | null; // existing saved photo
   initialFile?: File | null; // e.g. the scanner's captured photo
   onChange: (file: File | null) => void;
   capture?: boolean; // open the camera directly on phones
+  className?: string;
+  placeholderIconSrc?: string;
 };
 
 export function PhotoField({
@@ -15,6 +18,8 @@ export function PhotoField({
   initialFile = null,
   onChange,
   capture,
+  className,
+  placeholderIconSrc,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(() =>
@@ -33,14 +38,22 @@ export function PhotoField({
     <button
       type="button"
       onClick={() => inputRef.current?.click()}
-      className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-card shadow-sm"
+      className={cn(
+        "flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-card shadow-sm",
+        className,
+      )}
       aria-label="Choose a photo"
     >
       {preview ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={preview} alt="" className="h-full w-full object-cover" />
       ) : (
-        <ImagePlus className="h-16 w-16 text-muted-foreground" />
+        placeholderIconSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={placeholderIconSrc} alt="" width={122} height={122} />
+        ) : (
+          <ImagePlus className="h-16 w-16 text-muted-foreground" />
+        )
       )}
       <input
         ref={inputRef}

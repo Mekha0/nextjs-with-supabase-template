@@ -5,7 +5,7 @@ import type { z } from "zod";
 import type { createCraftSchema, updateCraftSchema } from "@/lib/validation/crafts";
 
 const CRAFT_COLUMNS =
-  "id, title, description, status, photo_url, completed_at, created_at, updated_at";
+  "id, title, description, status, photo_url, required_materials, completed_at, created_at, updated_at";
 
 export type CreateCraftInput = z.infer<typeof createCraftSchema>;
 export type UpdateCraftInput = z.infer<typeof updateCraftSchema>;
@@ -46,11 +46,23 @@ export async function updateCraft(
   id: string,
   input: UpdateCraftInput,
 ) {
-  if (input.status === "complete") {
-    const { data, error } = await supabase.rpc("complete_craft", {
-      p_craft_id: id,
-      p_changes: input,
-    });
+  if (input.status === "complete" || input.status === "in_progress") {
+    const changes = { ...input };
+    delete changes.status;
+    if (Object.keys(changes).length > 0) {
+      const { data: updated, error: updateError } = await supabase
+        .from("crafts")
+        .update({ ...changes, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("user_id", userId)
+        .select("id")
+        .maybeSingle();
+      if (updateError) return { data: null, error: updateError };
+      if (!updated) return { data: null, error: null };
+    }
+
+    const rpcName = input.status === "complete" ? "complete_craft" : "start_craft";
+    const { data, error } = await supabase.rpc(rpcName, { p_craft_id: id });
     if (error) return { data: null, error };
     if (!data) return { data: null, error: null };
     return {

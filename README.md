@@ -100,12 +100,12 @@ Add your Roboflow private API key to `.env.local` (do not use a `NEXT_PUBLIC_` v
 
 ```env
 ROBOFLOW_API_KEY=your-roboflow-api-key
-ROBOFLOW_WORKFLOW_URL=https://serverless.roboflow.com/infer/workflows/your-workspace/your-workflow-id
+ROBOFLOW_MODEL_URL=https://serverless.roboflow.com/me995802-ucf-edu/yolo-gwc11-izfl6-4-yolo26s-t1
 ```
 
-Open `/scan` over HTTPS (or on localhost), allow camera access, start the camera, take a photo, and choose **Identify materials**. You can also upload a JPEG or PNG. The client sends the image as multipart form data to `POST /api/scan`; the server calls the configured Roboflow Workflow with bearer authentication and returns `{ candidates: [{ name, confidence }] }`. In Roboflow, deploy the saved Workflow to the hosted API and copy its URL from the Deploy Workflow snippet into `ROBOFLOW_WORKFLOW_URL`; the URL format is `https://serverless.roboflow.com/infer/workflows/<workspace>/<workflow-id>`. Ensure its image input is named `image`. Images over 10 MB are rejected. The endpoint does not write to the database; any accepted candidates must be added separately through the items API. The API key stays on the server. Camera capture requires browser permission and HTTPS outside localhost.
+Open `/scan` over HTTPS (or on localhost), allow camera access, start the camera, take a photo, and choose **Identify materials**. You can also upload a JPEG or PNG. The client sends the image as multipart form data to `POST /api/scan`; the server sends the base64 image to the configured Roboflow model endpoint with bearer authentication and returns `{ candidates: [{ name, confidence }] }`. `ROBOFLOW_MODEL_URL` is the Serverless Cloud API URL for the model ID and version shown on the model's Deploy page. Images over 10 MB are rejected. The endpoint does not write to the database; any accepted candidates must be added separately through the items API. The API key stays on the server. Camera capture requires browser permission and HTTPS outside localhost.
 
-Apply `supabase/migrations/20261104120000_create_items.sql` to your Supabase project before saving supplies. `POST /api/items` requires a signed-in user and accepts `{ name, quantity?, photo_url? }`; it creates an item owned by that user. The scanner calls it once for each accepted candidate. The migration enables row-level security so users can only access their own rows.
+Apply the SQL files in `supabase/migrations/` to your Supabase project before saving supplies or crafts. `POST /api/items` requires a signed-in user and accepts `{ name, quantity?, photo_url? }`; it creates an item owned by that user. The scanner calls it once for each accepted candidate. The migrations enable row-level security so users can only access their own rows and create profiles with XP/level tracking.
 
 6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
 

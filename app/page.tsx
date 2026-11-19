@@ -3,27 +3,20 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    <main className="flex min-h-svh w-full items-center justify-center bg-background px-6 py-10">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center gap-6">
-          {/* App Logo */}
-          <div className="flex h-100 w-100 items-center justify-center overflow-hidden rounded-full shadow-md">
-            <Image
-              src="/images/logo.png"
-              alt="App logo"
-              width={80}
-              height={80}
-              priority
-              className="h-full w-full object-contain"
-            />
-          </div>
-
-          {/* Welcome Heading */}
-          <div className="text-center">
-            <h1 className="font-display text-4xl tracking-tight">Welcome!</h1>
-            <p className="font-sans mt-1 text-sm text-muted-foreground">
-              Turn the supplies you have into something wonderful.
-            </p>
+    <main className="welcome-stage">
+      <section className="welcome-screen" aria-label="Welcome">
+        <div className="welcome-content">
+          <h1 className="sr-only">Welcome</h1>
+          <div className="welcome-mark">
+            <div className="welcome-mark-art">
+              <Image
+                src="/figma-landing/logo-art.png"
+                alt="What Can I Make? logo"
+                width={298}
+                height={298}
+                priority
+              />
+            </div>
           </div>
 
           {/* Account Actions */}
