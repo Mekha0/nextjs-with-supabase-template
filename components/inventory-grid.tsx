@@ -6,7 +6,7 @@ import { Camera, Package, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PhotoPicker } from "@/components/photo-picker";
-import { removePhoto, uploadPhoto } from "@/lib/storage/photos";
+import { removePhoto, uploadPhoto } from "@/lib/storage/img-bucket";
 
 // ASSUMED item shape: adjust to what GET /api/items returns.
 type Item = {

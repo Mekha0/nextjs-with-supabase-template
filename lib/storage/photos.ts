@@ -1,18 +1,24 @@
 import { createClient } from "@/lib/supabase/client";
 
-const BUCKET = "img-bucket";
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+// TODO: confirm all three with your teammates
+export const PHOTO_BUCKET = "photos";
+const BUCKET_IS_PUBLIC = true; // if false, see the note below
+const MAX_DIMENSION = 1280; // px, longest side
+const JPEG_QUALITY = 0.8;
 
-// Resize and re-encode as JPEG so uploads stay small.
-async function toJpeg(file: File, maxSize = 1280): Promise<Blob> {
+export class PhotoError extends Error {}
+
+/** Shrinks any image to a JPEG blob (also fine for /api/scan: JPEG, well under 10 MB). */
+export async function downscaleImage(file: Blob): Promise<Blob> {
   let bitmap: ImageBitmap;
   try {
+    // "from-image" applies EXIF rotation, so phone photos aren't sideways
     bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   } catch {
-    throw new Error("Couldn't read that image. Try a JPEG or PNG.");
+    throw new PhotoError("That image format isn't supported. Try a JPEG or PNG.");
   }
 
-  const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
   const width = Math.round(bitmap.width * scale);
   const height = Math.round(bitmap.height * scale);
 
@@ -20,55 +26,35 @@ async function toJpeg(file: File, maxSize = 1280): Promise<Blob> {
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Couldn't process that image.");
-
-  ctx.fillStyle = "#fff"; // PNG transparency becomes white instead of black
-  ctx.fillRect(0, 0, width, height);
+  if (!ctx) throw new PhotoError("Could not process the image.");
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
-  return new Promise((resolve, reject) =>
-    canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("Couldn't process that image."))),
-      "image/jpeg",
-      0.85,
-    ),
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY),
   );
+  if (!blob) throw new PhotoError("Could not process the image.");
+  return blob;
 }
 
-/** Uploads to img-bucket and returns the public URL. */
-export async function uploadPhoto(file: File, folder: "items" | "crafts"): Promise<string> {
+/** Downscales, uploads to Supabase Storage, and returns the string to send as photo_url. */
+export async function uploadPhoto(file: Blob): Promise<string> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("You need to be signed in to upload photos.");
+  if (!user) throw new PhotoError("You need to be signed in to upload photos.");
 
-  const blob = await toJpeg(file);
-  const path = `${user.id}/${folder}/${crypto.randomUUID()}.jpg`;
+  const jpeg = await downscaleImage(file);
+  const path = `${user.id}/${crypto.randomUUID()}.jpg`;
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
-    contentType: "image/jpeg",
-    cacheControl: "31536000",
-  });
-  if (error) {
-    console.error("Photo upload failed", error.message);
-    throw new Error("Couldn't upload that photo.");
+  const { error } = await supabase.storage
+    .from(PHOTO_BUCKET)
+    .upload(path, jpeg, { contentType: "image/jpeg" });
+  if (error) throw new PhotoError("Could not upload the photo. Try again.");
+
+  if (BUCKET_IS_PUBLIC) {
+    return supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl;
   }
-
-  return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
-}
-
-/** Best-effort cleanup of a previously uploaded photo. Never throws. */
-export async function removePhoto(url: string | null | undefined) {
-  if (!url) return;
-  const marker = `/${BUCKET}/`;
-  const i = url.indexOf(marker);
-  if (i === -1) return;
-  const path = decodeURIComponent(url.slice(i + marker.length).split("?")[0]);
-  try {
-    await createClient().storage.from(BUCKET).remove([path]);
-  } catch {
-    /* ignore */
-  }
+  return path; // private bucket: store the path, and turn it into a signed URL when displaying
 }
