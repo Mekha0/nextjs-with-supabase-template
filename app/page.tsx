@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -6,15 +7,24 @@ export default function Home() {
       <section className="welcome-screen" aria-label="Welcome">
         <div className="phone-status" aria-hidden="true">
           <span className="status-time">9:41</span>
-          <img className="status-icons" src="/figma-auth/status-icons.svg" alt="" />
-          <img className="status-notch" src="/figma-auth/notch.svg" alt="" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="status-icons" src="/figma-landing/status-icons.svg" alt="" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="status-notch" src="/figma-landing/notch.svg" alt="" />
         </div>
 
         <div className="welcome-content">
-          <div className="welcome-artwork">
-            <img className="artwork-disc" src="/figma-auth/ellipse.svg" alt="" />
-            <img className="paperclip-art" src="/figma-auth/paperclip.svg" alt="" />
-            <h1>Welcome !</h1>
+          <h1 className="sr-only">Welcome</h1>
+          <div className="welcome-mark">
+            <div className="welcome-mark-art">
+              <Image
+                src="/figma-landing/logo-art.png"
+                alt="What Can I Make? logo"
+                width={298}
+                height={298}
+                priority
+              />
+            </div>
           </div>
 
           <nav className="welcome-actions" aria-label="Account">
