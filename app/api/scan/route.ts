@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { detectItems } from "@/lib/gemini/detect";
 
 const MODEL_URL =
   process.env.ROBOFLOW_MODEL_URL ??
@@ -130,6 +131,9 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (process.env.SCAN_PROVIDER === "gemini") {
+      return NextResponse.json({ candidates: await detectItems(image) });
+    }
     const modelResult = await runModel(image);
     return NextResponse.json({ candidates: extractCandidates(modelResult) });
   } catch (error) {
