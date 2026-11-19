@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
   // query params: limit (default 5, max 10), difficulty (default any), allow_extra (default false)
   const params = new URL(request.url).searchParams;
-  const limit = Number(params.get("limit") ?? 5);
+  const limit = Number(params.get("limit") ?? 3);
   const difficulty = params.get("difficulty") ?? "any";
   const allowExtra = params.get("allow_extra") === "true";
 
