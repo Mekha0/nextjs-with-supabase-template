@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@property --nav-active-x {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 12.5%;
+}
+
 @layer base {
   :root {
     --cream: 38 100% 93%;
@@ -76,6 +82,34 @@
 }
 
 @layer components {
+  .navbar-cutout {
+    -webkit-mask-image: radial-gradient(
+      ellipse 50px 44px at var(--nav-active-x) 0,
+      transparent 0 43px,
+      #000 44px
+    );
+    mask-image: radial-gradient(
+      ellipse 50px 44px at var(--nav-active-x) 0,
+      transparent 0 43px,
+      #000 44px
+    );
+    transition: --nav-active-x 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .navbar-active {
+    left: var(--nav-active-x);
+    transform: translateX(-50%);
+    transition: left 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .navbar-cutout,
+    .navbar-active,
+    .navbar-item-icon {
+      transition-duration: 0.01ms;
+    }
+  }
+
   .welcome-stage {
     display: grid;
     min-height: 100svh;

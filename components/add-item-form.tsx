@@ -37,6 +37,7 @@ export function AddItemForm({
   variant = "default",
 }: Props) {
   const editor = variant === "editor";
+  const equalActionButtons = Boolean(onDelete);
   const [name, setName] = useState(initial?.name ?? "");
   const [quantityText, setQuantityText] = useState(
     String(initial?.quantity ?? 1),
@@ -197,7 +198,8 @@ export function AddItemForm({
       <div
         className={cn(
           "flex gap-3",
-          editor && "mx-auto w-full max-w-[334px] gap-6",
+          equalActionButtons && "grid w-full grid-cols-2",
+          editor && "mx-auto max-w-[334px] gap-6",
         )}
       >
         {onDelete ? (
@@ -207,12 +209,14 @@ export function AddItemForm({
             disabled={busy}
             onClick={handleDelete}
             className={cn(
-              "flex-1 rounded-full",
+              equalActionButtons
+                ? "h-[50px] w-full min-w-0 flex-none rounded-full"
+                : "flex-1 rounded-full",
               editor &&
-                "h-[50px] rounded-[28px] border-[3px] border-[#8a2c2c] bg-[#b55353] text-[20px] font-bold text-[#fff2db] hover:bg-[#a84949]",
+                "rounded-[28px] border-[3px] border-[#8a2c2c] bg-[#b55353] text-[20px] font-bold text-[#fff2db] hover:bg-[#a84949]",
             )}
           >
-            {confirmDelete ? "Tap again to delete" : "Delete"}
+            {confirmDelete ? (editor ? "Confirm?" : "Tap again to delete") : "Delete"}
           </Button>
         ) : (
           <Button
@@ -221,15 +225,27 @@ export function AddItemForm({
             disabled={busy}
             onClick={onCancel}
             className={cn(
-              "flex-1 rounded-full",
+              equalActionButtons
+                ? "h-[50px] w-full min-w-0 flex-none rounded-full"
+                : "flex-1 rounded-full",
               editor &&
-                "h-[50px] rounded-[28px] border-[3px] border-[#496944] bg-[#496944] text-[20px] font-bold text-[#fff2db] hover:bg-[#3e5d3a]",
+                "rounded-[28px] border-[3px] border-[#496944] bg-[#496944] text-[20px] font-bold text-[#fff2db] hover:bg-[#3e5d3a]",
             )}
           >
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={busy} className="flex-1 rounded-full">
+        <Button
+          type="submit"
+          disabled={busy}
+          className={cn(
+            equalActionButtons
+              ? "h-[50px] w-full min-w-0 flex-none rounded-full"
+              : "flex-1 rounded-full",
+            editor &&
+              "rounded-[28px] border-[3px] border-[#496944] bg-[#496944] text-[20px] font-bold text-[#fff2db] hover:bg-[#3e5d3a]",
+          )}
+        >
           {busy ? "Saving…" : "Save"}
         </Button>
       </div>
