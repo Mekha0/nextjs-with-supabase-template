@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PhotoPicker } from "@/components/photo-picker";
 import { removePhoto, uploadPhoto } from "@/lib/storage/img-bucket";
+import { createItemSchema } from "@/lib/validation/items";
 
 // ASSUMED item shape: adjust to what GET /api/items returns.
 type Item = {
@@ -121,6 +122,7 @@ export function InventoryGrid() {
               <button
                 type="button"
                 onClick={() => setSelected(item)}
+                aria-label={`Edit ${item.name}`}
                 className={cn(
                   "w-full rounded-xl p-2.5 text-left shadow-md transition-transform active:scale-95",
                   POSTIT[i % POSTIT.length],
@@ -157,18 +159,19 @@ export function InventoryGrid() {
           }}
         />
       )}
-
       {selected && (
-        <ItemSheet
+        <ItemEditSheet
           item={selected}
           sharedPhoto={
             !!selected.photo_url &&
             items.some(
-              (i) => i.id !== selected.id && i.photo_url === selected.photo_url,
+              (candidate) =>
+                candidate.id !== selected.id &&
+                candidate.photo_url === selected.photo_url,
             )
           }
           onClose={() => setSelected(null)}
-          onDeleted={() => {
+          onSaved={() => {
             setSelected(null);
             void load();
           }}
@@ -322,98 +325,152 @@ function AddItemSheet({
   );
 }
 
-function ItemSheet({
+function ItemEditSheet({
   item,
   sharedPhoto,
   onClose,
-  onDeleted,
+  onSaved,
 }: {
   item: Item;
   sharedPhoto: boolean;
   onClose: () => void;
-  onDeleted: () => void;
+  onSaved: () => void;
 }) {
-  const [confirming, setConfirming] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [name, setName] = useState(item.name);
+  const [quantity, setQuantity] = useState(String(item.quantity));
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function save(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const parsed = createItemSchema.safeParse({
+      name,
+      quantity: Number(quantity),
+      photo_url: item.photo_url,
+    });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Check the supply details.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    let uploadedPhotoUrl: string | null = null;
+    try {
+      uploadedPhotoUrl = photo ? await uploadPhoto(photo, "items") : null;
+      const photoUrl = uploadedPhotoUrl ?? item.photo_url;
+      const response = await fetch(`/api/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...parsed.data,
+          photo_url: photoUrl,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok)
+        throw new Error(data?.error?.message ?? "Couldn't update that supply.");
+
+      if (uploadedPhotoUrl && item.photo_url && !sharedPhoto)
+        void removePhoto(item.photo_url);
+      onSaved();
+    } catch (err) {
+      if (uploadedPhotoUrl) void removePhoto(uploadedPhotoUrl);
+      setError(
+        err instanceof Error ? err.message : "Couldn't update that supply.",
+      );
+      setSaving(false);
+    }
+  }
+
   async function remove() {
-    setDeleting(true);
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+
+    setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/items/${item.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+      const response = await fetch(`/api/items/${item.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
         throw new Error(data?.error?.message ?? "Couldn't delete that supply.");
       }
-      if (!sharedPhoto) void removePhoto(item.photo_url);
-      onDeleted();
+      if (item.photo_url && !sharedPhoto) void removePhoto(item.photo_url);
+      onSaved();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Couldn't delete that supply.",
       );
-      setDeleting(false);
+      setSaving(false);
+      setConfirmDelete(false);
     }
   }
 
   return (
-    <Sheet title={item.name} onClose={onClose}>
-      <div className="space-y-4">
-        <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl bg-cork-input text-foreground/40">
-          {item.photo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.photo_url}
-              alt={item.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <Package className="h-12 w-12" strokeWidth={1.25} />
-          )}
+    <Sheet title="Edit item" onClose={onClose}>
+      <form onSubmit={save} className="space-y-4">
+        <div className="grid gap-1.5">
+          <label htmlFor="edit-item-name" className="text-xs text-foreground/70">
+            Type
+          </label>
+          <input
+            id="edit-item-name"
+            required
+            maxLength={64}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="h-11 rounded-full bg-cork-input px-4 text-sm outline-none focus:ring-2 focus:ring-primary"
+          />
         </div>
-        <p className="text-sm text-foreground/80">Quantity: {item.quantity}</p>
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        {confirming ? (
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="h-11 flex-1 rounded-full"
-              onClick={() => setConfirming(false)}
-            >
-              Keep it
-            </Button>
-            <Button
-              variant="destructive"
-              className="h-11 flex-1 rounded-full"
-              onClick={remove}
-              disabled={deleting}
-            >
-              {deleting ? "Deleting…" : "Yes, delete"}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="h-11 flex-1 rounded-full"
-              onClick={onClose}
-            >
-              Close
-            </Button>
-            <Button
-              variant="destructive"
-              className="h-11 flex-1 rounded-full"
-              onClick={() => setConfirming(true)}
-            >
-              Delete
-            </Button>
-          </div>
-        )}
-      </div>
+        <div className="grid gap-1.5">
+          <label htmlFor="edit-item-quantity" className="text-xs text-foreground/70">
+            Quantity
+          </label>
+          <input
+            id="edit-item-quantity"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step={1}
+            value={quantity}
+            onChange={(event) => setQuantity(event.target.value)}
+            className="h-11 rounded-full bg-cork-input px-4 text-sm outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        <PhotoPicker
+          file={photo}
+          onChange={setPhoto}
+          existingUrl={item.photo_url}
+          disabled={saving}
+        />
+
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            type="button"
+            variant="destructive"
+            className="h-11 w-full rounded-full"
+            onClick={remove}
+            disabled={saving}
+          >
+            {confirmDelete ? "Confirm delete" : "Delete"}
+          </Button>
+          <Button
+            type="submit"
+            className="h-11 w-full rounded-full"
+            disabled={saving}
+          >
+            {saving ? (photo ? "Uploading…" : "Saving…") : "Save"}
+          </Button>
+        </div>
+      </form>
     </Sheet>
   );
 }
