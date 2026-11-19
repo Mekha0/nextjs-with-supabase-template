@@ -80,7 +80,7 @@
     display: grid;
     min-height: 100svh;
     place-items: center;
-    background: #211b18;
+    background: hsl(var(--background));
   }
 
   .welcome-screen {
@@ -90,44 +90,8 @@
     min-height: 620px;
     overflow: hidden;
     border-radius: 24px;
-    background: #fff2db;
+    background: hsl(var(--background));
     color: #502d1e;
-  }
-
-  .phone-status {
-    position: absolute;
-    inset: 0 0 auto;
-    height: 47px;
-    color: #000;
-  }
-
-  .status-time {
-    position: absolute;
-    top: 14px;
-    left: 27px;
-    width: 54px;
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 22px;
-    letter-spacing: -0.408px;
-    text-align: center;
-  }
-
-  .status-icons {
-    position: absolute;
-    top: 17px;
-    right: 26px;
-    width: 78.261px;
-    height: 13px;
-  }
-
-  .status-notch {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 153.432px;
-    height: 32px;
-    transform: translateX(-50%);
   }
 
   .welcome-content {
