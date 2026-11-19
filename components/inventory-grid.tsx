@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Camera, Package, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AddItemForm } from "@/components/add-item-form";
+import { deleteItem, updateItem } from "@/lib/api/items";
 
 // ASSUMED item shape: adjust to what GET /api/items returns.
 type Item = {
@@ -160,7 +162,7 @@ export function InventoryGrid() {
         <ItemSheet
           item={selected}
           onClose={() => setSelected(null)}
-          onDeleted={() => {
+          onSaved={() => {
             setSelected(null);
             void load();
           }}
@@ -174,10 +176,12 @@ function Sheet({
   title,
   onClose,
   children,
+  closeLabel,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  closeLabel?: string;
 }) {
   return (
     <div
@@ -191,15 +195,24 @@ function Sheet({
         onClick={(e) => e.stopPropagation()}
         className="mx-auto w-full max-w-md rounded-t-3xl bg-background p-5 pb-8 shadow-xl"
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{title}</h2>
+        <div
+          className={cn(
+            "mb-4 flex items-center justify-between",
+            closeLabel && "border-b border-[#502d1e] pb-1",
+          )}
+        >
+          <h2 className="text-2xl font-bold text-[#502d1e]">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
-            className="rounded-full p-1.5 hover:bg-muted"
+            aria-label={closeLabel ?? "Close"}
+            className={cn(
+              "rounded-full p-1.5 hover:bg-muted",
+              closeLabel &&
+                "min-w-[103px] border border-[#496944] px-4 py-2 text-[16px] font-bold text-[#502d1e]",
+            )}
           >
-            <X className="h-5 w-5" />
+            {closeLabel ?? <X className="h-5 w-5" />}
           </button>
         </div>
         {children}
@@ -305,92 +318,27 @@ function AddItemSheet({
 function ItemSheet({
   item,
   onClose,
-  onDeleted,
+  onSaved,
 }: {
   item: Item;
   onClose: () => void;
-  onDeleted: () => void;
+  onSaved: () => void;
 }) {
-  const [confirming, setConfirming] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function remove() {
-    setDeleting(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/items/${item.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error?.message ?? "Couldn't delete that supply.");
-      }
-      onDeleted();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Couldn't delete that supply.",
-      );
-      setDeleting(false);
-    }
-  }
-
   return (
-    <Sheet title={item.name} onClose={onClose}>
-      <div className="space-y-4">
-        <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl bg-cork-input text-foreground/40">
-          {item.photo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.photo_url}
-              alt={item.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <Package className="h-12 w-12" strokeWidth={1.25} />
-          )}
-        </div>
-        <p className="text-sm text-foreground/80">Quantity: {item.quantity}</p>
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        {confirming ? (
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="h-11 flex-1 rounded-full"
-              onClick={() => setConfirming(false)}
-            >
-              Keep it
-            </Button>
-            <Button
-              variant="destructive"
-              className="h-11 flex-1 rounded-full"
-              onClick={remove}
-              disabled={deleting}
-            >
-              {deleting ? "Deleting…" : "Yes, delete"}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="h-11 flex-1 rounded-full"
-              onClick={onClose}
-            >
-              Close
-            </Button>
-            <Button
-              variant="destructive"
-              className="h-11 flex-1 rounded-full"
-              onClick={() => setConfirming(true)}
-            >
-              Delete
-            </Button>
-          </div>
-        )}
-      </div>
+    <Sheet title="Edit Item" onClose={onClose} closeLabel="Cancel">
+      <AddItemForm
+        variant="editor"
+        initial={item}
+        onCancel={onClose}
+        onSave={async (values) => {
+          await updateItem(item.id, values);
+          onSaved();
+        }}
+        onDelete={async () => {
+          await deleteItem(item.id);
+          onSaved();
+        }}
+      />
     </Sheet>
   );
 }
