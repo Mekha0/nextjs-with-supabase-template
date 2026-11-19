@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, ImagePlus, RotateCcw } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { removePhoto, uploadPhoto } from "@/lib/storage/photos";
 import { cn } from "@/lib/utils";
 
 type ScanState = "idle" | "scanning" | "done" | "error";
@@ -10,16 +11,20 @@ type Candidate = {
   id: string;
   name: string;
   confidence: number;
-  quantity: number;
   accepted: boolean;
+  fromScan: boolean; // false for supplies typed in by hand
 };
 type Notice = { text: string; tone: "error" | "success" } | null;
 
 export function MaterialScanner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  // The uploaded copy of the current photo, and how many items point at it.
+  const uploadedRef = useRef<{ value: string; used: number } | null>(null);
+
   const [cameraOn, setCameraOn] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [attachPhoto, setAttachPhoto] = useState(true);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [manualName, setManualName] = useState("");
   const [state, setState] = useState<ScanState>("idle");
@@ -39,7 +44,15 @@ export function MaterialScanner() {
     [],
   );
 
+  // If the photo was uploaded but no item ended up using it, delete the file.
+  function discardUpload() {
+    const up = uploadedRef.current;
+    if (up && up.used === 0) void removePhoto(up.value);
+    uploadedRef.current = null;
+  }
+
   function reset() {
+    discardUpload();
     setPhoto(null);
     setCandidates([]);
     setState("idle");
@@ -77,6 +90,7 @@ export function MaterialScanner() {
     canvas
       .getContext("2d")
       ?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    discardUpload();
     setPhoto(canvas.toDataURL("image/jpeg", 0.85));
     setCandidates([]);
     setState("idle");
@@ -97,6 +111,7 @@ export function MaterialScanner() {
       reader.readAsDataURL(file);
     });
     stopCamera();
+    discardUpload();
     setPhoto(dataUrl);
     setCandidates([]);
     setState("idle");
@@ -123,10 +138,11 @@ export function MaterialScanner() {
       if (!response.ok) throw new Error(data.error ?? "The scan failed.");
       setCandidates(
         (data.candidates ?? []).map(
-          (c: { name: string; confidence: number; quantity: number }) => ({
+          (c: { name: string; confidence: number }) => ({
             ...c,
             id: crypto.randomUUID(),
             accepted: true,
+            fromScan: true,
           }),
         ),
       );
@@ -143,9 +159,27 @@ export function MaterialScanner() {
     if (!name) return;
     setCandidates((cur) => [
       ...cur,
-      { id: crypto.randomUUID(), name, confidence: 0, quantity: 1, accepted: true },
+      {
+        id: crypto.randomUUID(),
+        name,
+        confidence: 0,
+        accepted: true,
+        fromScan: false,
+      },
     ]);
     setManualName("");
+  }
+
+  // Uploads the scan photo once, then reuses it for every item.
+  async function ensureUploaded(): Promise<string> {
+    if (uploadedRef.current) return uploadedRef.current.value;
+    const blob = await (await fetch(photo as string)).blob();
+    const file = new File([blob], "scan.jpg", {
+      type: blob.type || "image/jpeg",
+    });
+    const value = await uploadPhoto(file, "items");
+    uploadedRef.current = { value, used: 0 };
+    return value;
   }
 
   async function saveAcceptedCandidates() {
@@ -159,14 +193,26 @@ export function MaterialScanner() {
     const summary = () =>
       `${saved} ${saved === 1 ? "supply was" : "supplies were"} added.`;
     try {
+      let photoValue: string | null = null;
+      if (attachPhoto && photo && toSave.some((c) => c.fromScan)) {
+        try {
+          photoValue = await ensureUploaded();
+        } catch {
+          throw new Error(
+            "Couldn't upload the photo. Try again, or turn off “Save this photo” to add the supplies without it.",
+          );
+        }
+      }
+
       for (const candidate of toSave) {
+        const usePhoto = candidate.fromScan ? photoValue : null;
         const response = await fetch("/api/items", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: candidate.name.trim(),
-            quantity: candidate.quantity,
-            photo_url: null,
+            quantity: 1,
+            photo_url: usePhoto,
           }),
         });
         const data = await response.json();
@@ -175,6 +221,7 @@ export function MaterialScanner() {
             data.error?.message ?? `Could not add ${candidate.name}.`,
           );
         saved += 1;
+        if (usePhoto && uploadedRef.current) uploadedRef.current.used += 1;
         setCandidates((cur) => cur.filter((item) => item.id !== candidate.id));
       }
       setNotice({ text: summary(), tone: "success" });
@@ -291,7 +338,7 @@ export function MaterialScanner() {
           <div>
             <h2 className="font-medium">Review detected supplies</h2>
             <p className="text-sm text-foreground/70">
-              Adjust names and detected counts before adding them. Counts are estimates of visible items.
+              Edit or uncheck names before adding them.
             </p>
           </div>
 
@@ -310,21 +357,6 @@ export function MaterialScanner() {
                     onChange={(e) =>
                       updateCandidate(c.id, { accepted: e.target.checked })
                     }
-                  />
-                  <input
-                    aria-label={`Quantity of ${c.name}`}
-                    className="w-16 rounded-lg bg-cork px-2 py-1 text-center text-sm outline-none"
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    step={1}
-                    value={c.quantity}
-                    onChange={(e) => {
-                      const quantity = Number(e.target.value);
-                      if (Number.isInteger(quantity) && quantity >= 1) {
-                        updateCandidate(c.id, { quantity });
-                      }
-                    }}
                   />
                   <input
                     aria-label="Supply name"
@@ -364,6 +396,18 @@ export function MaterialScanner() {
               Add
             </Button>
           </form>
+
+          {photo && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[hsl(var(--primary))]"
+                checked={attachPhoto}
+                onChange={(e) => setAttachPhoto(e.target.checked)}
+              />
+              Save this photo with the detected supplies
+            </label>
+          )}
 
           {candidates.some((c) => c.accepted) && (
             <Button
