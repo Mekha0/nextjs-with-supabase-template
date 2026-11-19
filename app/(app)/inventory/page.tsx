@@ -51,7 +51,7 @@ import { InventoryGrid } from "@/components/inventory-grid";
 export default function InventoryPage() {
   return (
     <main className="min-h-screen bg-background px-4 pb-28 pt-8">
-      <div className="mx-auto w-full max-w-md">
+      <div className="font-sans mx-auto w-full max-w-md">
         <Suspense
           fallback={
             <p className="text-sm text-muted-foreground">
