@@ -1,122 +1,32 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+## Inspiration
+After finishing a craft, you're left with a bunch of extra items that you don't know how to get rid of; watching them pile up, no purpose in sight, can feel rather daunting. We introduce Scraps: Turn Your Scraps Into Crafts, an app that breathes life into these leftover "scrap" items by suggesting craft ideas that use what you have.
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+## What it does
+Users can take pictures of what they have---or manually enter them---save them into their inventory, and receive suggestions on what crafts they can build with them. Presented is a charming panel with a short description of the craft, the items required to build it, and an instructions set included (if one exists). Additionally, users own their own 'room' where they can display pictures of their crafts and keep track of the crafts they've completed and those in progress. With every step towards completing their craft, they gain XP and can level up, gaining a new title and rewards. By gamifying the Scraps-Into-Crafts pipeline, we want users to feel excitement towards the potential of their 'scraps,' rather than dreading the disposal of their excess supplies. 
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+## How we built it
+- Nextjs (Framework)
+- Supabase (Database) - Image storage and database.
+- Roboflow (vision model) - We collected a dataset, combining preexisting datasets and hand-collecting our own images, and trained a YOLOv11S model on it.
+- Vercel (deployment)
 
-## Features
+## Challenges we ran into
+- Training our vision model took a lot of troubleshooting and was time consuming. There was a big learning curve for gathering the right images, annotating each material in each image, training the model, and testing
+- Getting Gemini API to not return hallucinated links or links that no longer exist. We refined our prompt to include strict link requirements and wrote a function to check if the returned URL exists. We retry max three times if we cannot find a valid link. If no valid links are found, we display the craft with no included link (just the description).
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Proxy
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+## Accomplishments that we're proud of
+- Functional website that is deployed and accessible
+- Pretty UI with a cozy room theme
+- Working API and suggested crafts function
+- Vision model finetuned for crafts materials
 
-## Demo
+## What we learned
+- Prompt engineering and how to use open source AI models (including adding filters, parameters, hallucination-handling, safety, rate limits, libraries, etc)
+- How Zod (validation library for TypeScript) works
+- Using Figma and an MCP server to integrate UI functionality
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
-
-## Deploy to Vercel
-
-Vercel deployment will guide you through creating a Supabase account and project.
-
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
-
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
-
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
-
-## Clone and run locally
-
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
-
-2. Create a Next.js app using the Supabase Starter template npx command
-
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
-   ```
-
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
-
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
-
-3. Use `cd` to change into the app's directory
-
-   ```bash
-   cd with-supabase-app
-   ```
-
-4. Rename `.env.example` to `.env.local` and update the following:
-
-  ```env
-  NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=[INSERT SUPABASE PROJECT API PUBLISHABLE OR ANON KEY]
-  ```
-  > [!NOTE]
-  > This example uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which refers to Supabase's new **publishable** key format.
-  > Both legacy **anon** keys and new **publishable** keys can be used with this variable name during the transition period. Supabase's dashboard may show `NEXT_PUBLIC_SUPABASE_ANON_KEY`; its value can be used in this example.
-  > See the [full announcement](https://github.com/orgs/supabase/discussions/29260) for more information.
-
-  Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
-
-5. You can now run the Next.js local development server:
-
-   ```bash
-   npm run dev
-   ```
-
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
-
-## Roboflow material scanner
-
-Add your Roboflow private API key to `.env.local` (do not use a `NEXT_PUBLIC_` variable):
-
-```env
-ROBOFLOW_API_KEY=your-roboflow-api-key
-ROBOFLOW_MODEL_URL=https://serverless.roboflow.com/me995802-ucf-edu/yolo-gwc11-izfl6-4-yolo26s-t1
-```
-
-Open `/scan` over HTTPS (or on localhost), allow camera access, start the camera, take a photo, and choose **Identify materials**. You can also upload a JPEG or PNG. The client sends the image as multipart form data to `POST /api/scan`; the server sends the base64 image to the configured Roboflow model endpoint with bearer authentication and returns `{ candidates: [{ name, confidence }] }`. `ROBOFLOW_MODEL_URL` is the Serverless Cloud API URL for the model ID and version shown on the model's Deploy page. Images over 10 MB are rejected. The endpoint does not write to the database; any accepted candidates must be added separately through the items API. The API key stays on the server. Camera capture requires browser permission and HTTPS outside localhost.
-
-Apply the SQL files in `supabase/migrations/` to your Supabase project before saving supplies or crafts. `POST /api/items` requires a signed-in user and accepts `{ name, quantity?, photo_url? }`; it creates an item owned by that user. The scanner calls it once for each accepted candidate. The migrations enable row-level security so users can only access their own rows and create profiles with XP/level tracking.
-
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
-
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
-
-## Feedback and issues
-
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
-
-## More Supabase examples
-
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+## What's next for Scraps
+- Improved object detection model to improve accuracy and broaden the variety of materials
+- Community board feature to share projects and ideas
+- Friends feature that lets users display their crafts amongst their circles and keep a leaderboard of high-achieving crafters
+- For-you-page that features user-made video tutorials on how to complete a craft
