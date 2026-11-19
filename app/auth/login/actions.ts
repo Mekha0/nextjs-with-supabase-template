@@ -20,5 +20,5 @@ export async function login(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) return { error: error.message };
-  redirect("/scan");
+  redirect("/home");
 }

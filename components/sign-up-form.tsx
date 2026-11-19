@@ -62,7 +62,7 @@ export function SignUpForm() {
         </>
       }
     >
-      <form onSubmit={handleSignUp} className="flex flex-col gap-4">
+      <form onSubmit={handleSignUp} className="font-sans flex flex-col gap-4">
         <IconField
           id="name"
           label="Name"
@@ -108,7 +108,8 @@ export function SignUpForm() {
         <Button
           type="submit"
           disabled={isLoading}
-          className="mx-auto h-11 w-3/4 rounded-full"
+          // className="mx-auto h-11 w-3/4 rounded-full"
+          variant="default"
         >
           {isLoading ? "Creating account…" : "Register"}
         </Button>

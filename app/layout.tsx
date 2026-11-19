@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Glory, Grand_Hotel } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
@@ -19,13 +19,31 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
+const glory = Glory({
+  subsets: ["latin"],
+  variable: "--font-glory",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const grandHotel = Grand_Hotel({
+  subsets: ["latin"],
+  variable: "--font-grand-hotel",
+  weight: "400",
+  display: "swap",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${glory.variable} ${grandHotel.variable}`}
+      suppressHydrationWarning
+    >
       <body className={`${geistSans.className} antialiased`}>
         <ThemeProvider
           attribute="class"

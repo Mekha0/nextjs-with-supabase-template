@@ -1,4 +1,5 @@
-import { Paperclip, type LucideIcon } from "lucide-react";
+import Image from "next/image";
+import type { LucideIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -15,15 +16,29 @@ export function AuthShell({
 }) {
   return (
     <div className="flex flex-col items-center gap-6">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground">
-        <Paperclip className="h-9 w-9 -rotate-45" />
+      {/* App Logo */}
+      <div className="flex h-100 w-100 items-center justify-center overflow-hidden rounded-full shadow-md">
+        <Image
+          src="/images/logo.png"
+          alt="App logo"
+          width={110}
+          height={110}
+          priority
+          className="h-full w-full object-cover"
+        />
       </div>
+
       <div className="text-center">
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+        <h1 className="font-display text-4xl tracking-tight">{title}</h1>
+        <p className="font-sans mt-1 text-sm text-muted-foreground">
+          {subtitle}
+        </p>
       </div>
-      <div className="w-full rounded-3xl bg-cork p-5 shadow-md">{children}</div>
-      <p className="text-sm text-muted-foreground">{footer}</p>
+
+      <div className="text-sm w-full rounded-3xl bg-cork p-5 shadow-lg">
+        {children}
+      </div>
+      <p className="font-sans text-sm text-muted-foreground">{footer}</p>
     </div>
   );
 }

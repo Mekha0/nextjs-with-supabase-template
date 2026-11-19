@@ -26,7 +26,7 @@ export function LoginForm() {
         </>
       }
     >
-      <form action={formAction} className="flex flex-col gap-4">
+      <form action={formAction} className="font-sans flex flex-col gap-4">
         <IconField
           id="email"
           name="email"
@@ -58,11 +58,15 @@ export function LoginForm() {
           </p>
         )}
 
-        <Button
+        {/* <Button
           type="submit"
           disabled={isPending}
-          className="mx-auto h-11 w-3/4 rounded-full"
+          className="text-base mx-auto h-11 w-3/4 rounded-full"
         >
+          {isPending ? "Signing in…" : "Sign in"}
+        </Button> */}
+
+        <Button type="submit" disabled={isPending} variant="default">
           {isPending ? "Signing in…" : "Sign in"}
         </Button>
       </form>
