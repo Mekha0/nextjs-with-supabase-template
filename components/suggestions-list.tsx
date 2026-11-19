@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { Bookmark, BookmarkCheck, RefreshCw, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Bookmark, BookmarkCheck, Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -40,13 +40,21 @@ function buildDescription(s: Suggestion) {
 }
 
 export function SuggestionsList() {
-  const [items, setItems] = useState<Suggestion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
+  // Options the user is choosing
   const [willingToBuy, setWillingToBuy] = useState(true);
   const [difficulty, setDifficulty] = useState<Difficulty>("any");
+
+  // Search state: nothing runs until the user presses the button
+  const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<Suggestion[]>([]);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [lastSearch, setLastSearch] = useState<{
+    difficulty: Difficulty;
+    allowExtra: boolean;
+  } | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Existing crafts, keyed by normalized title, so we can show Saved / In progress.
   const [crafts, setCrafts] = useState<Record<string, Craft>>({});
@@ -66,46 +74,48 @@ export function SuggestionsList() {
         /* non-fatal: buttons just won't know about existing crafts */
       }
     })();
+    return () => abortRef.current?.abort();
   }, []);
 
-  const load = useCallback(
-    async (signal: AbortSignal) => {
-      setLoading(true);
-      setError(null);
-      setExpanded(null);
-      try {
-        const qs = new URLSearchParams({
-          limit: "5",
-          difficulty,
-          allow_extra: String(willingToBuy),
-        });
-        const res = await fetch(`/api/suggestions?${qs}`, { signal });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setError({
-            code: data?.error?.code ?? "unknown",
-            message: data?.error?.message ?? "Couldn't load suggestions.",
-          });
-          setItems([]);
-          return;
-        }
-        setItems(data.suggestions ?? []);
-      } catch (e) {
-        if ((e as Error).name === "AbortError") return;
-        setError({ code: "network", message: "Couldn't reach the server." });
-        setItems([]);
-      } finally {
-        if (!signal.aborted) setLoading(false);
-      }
-    },
-    [difficulty, willingToBuy],
-  );
-
-  useEffect(() => {
+  async function search() {
+    abortRef.current?.abort();
     const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load, refreshKey]);
+    abortRef.current = controller;
+
+    setSearched(true);
+    setLoading(true);
+    setError(null);
+    setActionError(null);
+    setExpanded(null);
+    setLastSearch({ difficulty, allowExtra: willingToBuy });
+
+    try {
+      const qs = new URLSearchParams({
+        limit: "5",
+        difficulty,
+        allow_extra: String(willingToBuy),
+      });
+      const res = await fetch(`/api/suggestions?${qs}`, {
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError({
+          code: data?.error?.code ?? "unknown",
+          message: data?.error?.message ?? "Couldn't load suggestions.",
+        });
+        setItems([]);
+        return;
+      }
+      setItems(data.suggestions ?? []);
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      setError({ code: "network", message: "Couldn't reach the server." });
+      setItems([]);
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }
 
   async function saveCraft(s: Suggestion, status: CraftStatus) {
     const k = norm(s.title);
@@ -143,11 +153,17 @@ export function SuggestionsList() {
     }
   }
 
-  const retry = () => setRefreshKey((n) => n + 1);
+  const optionsChanged =
+    searched &&
+    !loading &&
+    lastSearch !== null &&
+    (lastSearch.difficulty !== difficulty ||
+      lastSearch.allowExtra !== willingToBuy);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="font-sans space-y-5">
+      {/* Options */}
+      <div className="font-sans flex flex-wrap items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -172,19 +188,42 @@ export function SuggestionsList() {
         </select>
       </div>
 
-      <div className="flex items-center gap-3 text-sm text-foreground/70">
-        <span>You can make:</span>
-        <span className="h-px flex-1 border-t border-dashed border-foreground/30" />
-        <button
-          type="button"
-          onClick={retry}
-          disabled={loading}
-          aria-label="Get new ideas"
-          className="rounded-full p-1.5 hover:bg-cork/50 disabled:opacity-50"
-        >
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-        </button>
-      </div>
+      <Button
+        className="h-12 w-full rounded-full"
+        onClick={search}
+        disabled={loading}
+      >
+        <Search className="mr-2 h-4 w-4" />
+        {loading ? "Searching…" : searched ? "Search again" : "Find projects"}
+      </Button>
+
+      {optionsChanged && (
+        <p className="text-center text-xs text-foreground/70">
+          You changed your options. Search again to update these ideas.
+        </p>
+      )}
+
+      {/* Before the first search */}
+      {!searched && (
+        <div className="font-sans space-y-2 rounded-2xl border border-dashed border-foreground/30 p-6 text-center">
+          <Sparkles
+            className="mx-auto h-8 w-8 text-foreground/40"
+            strokeWidth={1.5}
+          />
+          <p className="text-sm text-foreground/70">
+            Choose your options, then tap{" "}
+            <span className="font-medium">Find projects</span> to get ideas
+            based on your supplies.
+          </p>
+        </div>
+      )}
+
+      {searched && (
+        <div className="font-sans flex items-center gap-3 text-sm text-foreground/70">
+          <span>You can make:</span>
+          <span className="h-px flex-1 border-t border-dashed border-foreground/30" />
+        </div>
+      )}
 
       {actionError && (
         <p role="alert" className="text-sm text-destructive">
@@ -194,7 +233,7 @@ export function SuggestionsList() {
 
       {loading && (
         <div className="space-y-3" aria-busy="true">
-          <p className="flex items-center gap-2 text-sm text-foreground/70">
+          <p className="font-sans flex items-center gap-2 text-sm text-foreground/70">
             <Sparkles className="h-4 w-4" /> Dreaming up projects from your
             supplies…
           </p>
@@ -219,17 +258,12 @@ export function SuggestionsList() {
       )}
 
       {!loading && error && error.code !== "empty_inventory" && (
-        <div className="space-y-3 text-center">
-          <p role="alert" className="text-sm text-destructive">
-            {error.message}
-          </p>
-          <Button variant="outline" className="rounded-full" onClick={retry}>
-            Try again
-          </Button>
-        </div>
+        <p role="alert" className="text-center text-sm text-destructive">
+          {error.message}
+        </p>
       )}
 
-      {!loading && !error && items.length === 0 && (
+      {!loading && searched && !error && items.length === 0 && (
         <p className="rounded-2xl border border-dashed border-foreground/30 p-6 text-center text-sm text-foreground/70">
           Nothing matched. Try allowing extra supplies, or change the
           difficulty.

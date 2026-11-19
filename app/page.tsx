@@ -19,14 +19,22 @@ export default function Home() {
             </div>
           </div>
 
-          <nav className="welcome-actions" aria-label="Account">
-            <Link className="welcome-button welcome-button-primary" href="/auth/sign-up">
+          {/* Account Actions */}
+          <div className="flex w-full flex-col gap-4 rounded-3xl p-5">
+            <Link
+              href="/auth/sign-up"
+              className="font-sans flex h-11 w-3/4 mx-auto items-center justify-center rounded-full bg-primary text-primary-foreground font-medium transition-opacity hover:opacity-90"
+            >
               Sign up
             </Link>
-            <Link className="welcome-button welcome-button-secondary" href="/auth/login">
+
+            <Link
+              href="/auth/login"
+              className="font-sans flex h-11 w-3/4 mx-auto items-center justify-center rounded-full border border-border bg-background text-foreground font-medium transition-colors hover:bg-muted"
+            >
               Login
             </Link>
-          </nav>
+          </div>
         </div>
       </section>
     </main>

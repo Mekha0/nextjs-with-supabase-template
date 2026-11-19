@@ -1,3 +1,4 @@
+// import { Glory } from "next/font/google";
 import type { Config } from "tailwindcss";
 
 export default {
@@ -10,6 +11,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-glory)"],
+        display: ["var(--font-grand-hotel)"]
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
