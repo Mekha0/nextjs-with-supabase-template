@@ -5,8 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Camera, Package, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { AddItemForm } from "@/components/add-item-form";
-import { deleteItem, updateItem } from "@/lib/api/items";
+import { PhotoPicker } from "@/components/photo-picker";
+import { removePhoto, uploadPhoto } from "@/lib/storage/photos";
 
 // ASSUMED item shape: adjust to what GET /api/items returns.
 type Item = {
@@ -161,8 +161,14 @@ export function InventoryGrid() {
       {selected && (
         <ItemSheet
           item={selected}
+          sharedPhoto={
+            !!selected.photo_url &&
+            items.some(
+              (i) => i.id !== selected.id && i.photo_url === selected.photo_url,
+            )
+          }
           onClose={() => setSelected(null)}
-          onSaved={() => {
+          onDeleted={() => {
             setSelected(null);
             void load();
           }}
@@ -176,12 +182,10 @@ function Sheet({
   title,
   onClose,
   children,
-  closeLabel,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
-  closeLabel?: string;
 }) {
   return (
     <div
@@ -195,24 +199,15 @@ function Sheet({
         onClick={(e) => e.stopPropagation()}
         className="mx-auto w-full max-w-md rounded-t-3xl bg-background p-5 pb-8 shadow-xl"
       >
-        <div
-          className={cn(
-            "mb-4 flex items-center justify-between",
-            closeLabel && "border-b border-[#502d1e] pb-1",
-          )}
-        >
-          <h2 className="text-2xl font-bold text-[#502d1e]">{title}</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label={closeLabel ?? "Close"}
-            className={cn(
-              "rounded-full p-1.5 hover:bg-muted",
-              closeLabel &&
-                "min-w-[103px] border border-[#496944] px-4 py-2 text-[16px] font-bold text-[#502d1e]",
-            )}
+            aria-label="Close"
+            className="rounded-full p-1.5 hover:bg-muted"
           >
-            {closeLabel ?? <X className="h-5 w-5" />}
+            <X className="h-5 w-5" />
           </button>
         </div>
         {children}
@@ -230,6 +225,7 @@ function AddItemSheet({
 }) {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [photo, setPhoto] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -238,17 +234,25 @@ function AddItemSheet({
     if (!name.trim()) return;
     setSaving(true);
     setError(null);
+
+    let photoUrl: string | null = null;
     try {
+      if (photo) photoUrl = await uploadPhoto(photo, "items");
       const res = await fetch("/api/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), quantity, photo_url: null }),
+        body: JSON.stringify({
+          name: name.trim(),
+          quantity,
+          photo_url: photoUrl,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok)
         throw new Error(data?.error?.message ?? "Couldn't add that supply.");
       onAdded();
     } catch (err) {
+      void removePhoto(photoUrl); // don't leave an orphaned upload behind
       setError(
         err instanceof Error ? err.message : "Couldn't add that supply.",
       );
@@ -288,6 +292,9 @@ function AddItemSheet({
             className="h-11 rounded-full bg-cork-input px-4 text-sm outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
+
+        <PhotoPicker file={photo} onChange={setPhoto} disabled={saving} />
+
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}
@@ -307,7 +314,7 @@ function AddItemSheet({
             className="h-11 flex-1 rounded-full"
             disabled={saving}
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? (photo ? "Uploading…" : "Saving…") : "Save"}
           </Button>
         </div>
       </form>
@@ -317,28 +324,96 @@ function AddItemSheet({
 
 function ItemSheet({
   item,
+  sharedPhoto,
   onClose,
-  onSaved,
+  onDeleted,
 }: {
   item: Item;
+  sharedPhoto: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onDeleted: () => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/items/${item.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error?.message ?? "Couldn't delete that supply.");
+      }
+      if (!sharedPhoto) void removePhoto(item.photo_url);
+      onDeleted();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Couldn't delete that supply.",
+      );
+      setDeleting(false);
+    }
+  }
+
   return (
-    <Sheet title="Edit Item" onClose={onClose} closeLabel="Cancel">
-      <AddItemForm
-        variant="editor"
-        initial={item}
-        onCancel={onClose}
-        onSave={async (values) => {
-          await updateItem(item.id, values);
-          onSaved();
-        }}
-        onDelete={async () => {
-          await deleteItem(item.id);
-          onSaved();
-        }}
-      />
+    <Sheet title={item.name} onClose={onClose}>
+      <div className="space-y-4">
+        <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl bg-cork-input text-foreground/40">
+          {item.photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.photo_url}
+              alt={item.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <Package className="h-12 w-12" strokeWidth={1.25} />
+          )}
+        </div>
+        <p className="text-sm text-foreground/80">Quantity: {item.quantity}</p>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {confirming ? (
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="h-11 flex-1 rounded-full"
+              onClick={() => setConfirming(false)}
+            >
+              Keep it
+            </Button>
+            <Button
+              variant="destructive"
+              className="h-11 flex-1 rounded-full"
+              onClick={remove}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting…" : "Yes, delete"}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="h-11 flex-1 rounded-full"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+            <Button
+              variant="destructive"
+              className="h-11 flex-1 rounded-full"
+              onClick={() => setConfirming(true)}
+            >
+              Delete
+            </Button>
+          </div>
+        )}
+      </div>
     </Sheet>
   );
 }

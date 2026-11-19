@@ -7,6 +7,8 @@ import { ExternalLink, Hammer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/sheet";
 import { cn } from "@/lib/utils";
+import { PhotoPicker } from "@/components/photo-picker";
+import { removePhoto, uploadPhoto } from "@/lib/storage/photos";
 
 type CraftStatus = "todo" | "in_progress" | "complete";
 type Craft = {
@@ -222,36 +224,54 @@ function CraftSheet({
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const { full, link } = splitDescription(craft.description);
 
-  async function setStatus(status: CraftStatus) {
+  async function run(fn: () => Promise<void>) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/crafts/${craft.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok)
-        throw new Error(
-          data?.error?.message ?? "Couldn't update that project.",
-        );
-      onChanged((data.craft as Craft | undefined) ?? { ...craft, status });
+      await fn();
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Couldn't update that project.",
-      );
+      setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setBusy(false);
     }
   }
 
-  async function remove() {
-    setBusy(true);
-    setError(null);
+  async function patch(body: { status?: CraftStatus; photo_url?: string }) {
+    const res = await fetch(`/api/crafts/${craft.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok)
+      throw new Error(data?.error?.message ?? "Couldn't update that project.");
+    onChanged((data.craft as Craft | undefined) ?? { ...craft, ...body });
+  }
+
+  // Uploads the selected photo (if any), then updates the craft in one PATCH.
+  async function applyChanges(status?: CraftStatus) {
+    let url: string | undefined;
     try {
+      if (file) url = await uploadPhoto(file, "crafts");
+      await patch({
+        ...(status ? { status } : {}),
+        ...(url ? { photo_url: url } : {}),
+      });
+    } catch (e) {
+      void removePhoto(url);
+      throw e;
+    }
+    if (url && craft.photo_url) void removePhoto(craft.photo_url); // replaced
+    setFile(null);
+  }
+
+  const setStatus = (status: CraftStatus) => run(() => patch({ status }));
+
+  const remove = () =>
+    run(async () => {
       const res = await fetch(`/api/crafts/${craft.id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -259,19 +279,14 @@ function CraftSheet({
           data?.error?.message ?? "Couldn't delete that project.",
         );
       }
+      void removePhoto(craft.photo_url);
       onDeleted(craft.id);
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Couldn't delete that project.",
-      );
-      setBusy(false);
-    }
-  }
+    });
 
   return (
     <Sheet title={craft.title} onClose={onClose}>
       <div className="space-y-4">
-        {craft.photo_url && (
+        {craft.status === "todo" && craft.photo_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={craft.photo_url}
@@ -295,6 +310,20 @@ function CraftSheet({
           >
             <ExternalLink className="h-4 w-4" /> Open instructions
           </a>
+        )}
+
+        {craft.status !== "todo" && (
+          <PhotoPicker
+            file={file}
+            onChange={setFile}
+            existingUrl={craft.photo_url}
+            disabled={busy}
+            label={
+              craft.status === "complete"
+                ? "Photo of your finished craft"
+                : "Add a photo of your finished craft (optional)"
+            }
+          />
         )}
 
         {error && (
@@ -337,9 +366,9 @@ function CraftSheet({
                 <Button
                   className="h-11 w-full rounded-full"
                   disabled={busy}
-                  onClick={() => setStatus("complete")}
+                  onClick={() => run(() => applyChanges("complete"))}
                 >
-                  Mark complete
+                  {busy ? (file ? "Uploading…" : "Saving…") : "Mark complete"}
                 </Button>
                 <Button
                   variant="outline"
@@ -352,14 +381,25 @@ function CraftSheet({
               </>
             )}
             {craft.status === "complete" && (
-              <Button
-                variant="outline"
-                className="h-11 w-full rounded-full"
-                disabled={busy}
-                onClick={() => setStatus("in_progress")}
-              >
-                Reopen
-              </Button>
+              <>
+                {file && (
+                  <Button
+                    className="h-11 w-full rounded-full"
+                    disabled={busy}
+                    onClick={() => run(() => applyChanges())}
+                  >
+                    {busy ? "Uploading…" : "Save photo"}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  className="h-11 w-full rounded-full"
+                  disabled={busy}
+                  onClick={() => setStatus("in_progress")}
+                >
+                  Reopen
+                </Button>
+              </>
             )}
             <Button
               variant="ghost"
