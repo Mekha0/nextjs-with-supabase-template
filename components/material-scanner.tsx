@@ -10,6 +10,7 @@ type Candidate = {
   id: string;
   name: string;
   confidence: number;
+  quantity: number;
   accepted: boolean;
 };
 type Notice = { text: string; tone: "error" | "success" } | null;
@@ -122,7 +123,7 @@ export function MaterialScanner() {
       if (!response.ok) throw new Error(data.error ?? "The scan failed.");
       setCandidates(
         (data.candidates ?? []).map(
-          (c: { name: string; confidence: number }) => ({
+          (c: { name: string; confidence: number; quantity: number }) => ({
             ...c,
             id: crypto.randomUUID(),
             accepted: true,
@@ -142,7 +143,7 @@ export function MaterialScanner() {
     if (!name) return;
     setCandidates((cur) => [
       ...cur,
-      { id: crypto.randomUUID(), name, confidence: 0, accepted: true },
+      { id: crypto.randomUUID(), name, confidence: 0, quantity: 1, accepted: true },
     ]);
     setManualName("");
   }
@@ -164,7 +165,7 @@ export function MaterialScanner() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: candidate.name.trim(),
-            quantity: 1,
+            quantity: candidate.quantity,
             photo_url: null,
           }),
         });
@@ -290,7 +291,7 @@ export function MaterialScanner() {
           <div>
             <h2 className="font-medium">Review detected supplies</h2>
             <p className="text-sm text-foreground/70">
-              Edit or uncheck names before adding them.
+              Adjust names and detected counts before adding them. Counts are estimates of visible items.
             </p>
           </div>
 
@@ -309,6 +310,21 @@ export function MaterialScanner() {
                     onChange={(e) =>
                       updateCandidate(c.id, { accepted: e.target.checked })
                     }
+                  />
+                  <input
+                    aria-label={`Quantity of ${c.name}`}
+                    className="w-16 rounded-lg bg-cork px-2 py-1 text-center text-sm outline-none"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    step={1}
+                    value={c.quantity}
+                    onChange={(e) => {
+                      const quantity = Number(e.target.value);
+                      if (Number.isInteger(quantity) && quantity >= 1) {
+                        updateCandidate(c.id, { quantity });
+                      }
+                    }}
                   />
                   <input
                     aria-label="Supply name"
